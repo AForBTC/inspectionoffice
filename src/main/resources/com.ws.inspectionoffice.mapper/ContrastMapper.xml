@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ws.inspectionoffice.mapper.ContrastMapper">
+    
+    <resultMap type="Contrast" id="ContrastResult">
+        <result property="id"    column="id"    />
+        <result property="contrastName"    column="contrast_name"    />
+        <result property="fatherfileUrl"    column="fatherfile_url"    />
+        <result property="fatherfileName"    column="fatherfile_name"    />
+        <result property="createTimestamp"    column="create_timestamp"    />
+        <collection property="childList" ofType="Child" resultMap="childListResultMap"/>
+        <collection property="resultList" ofType="Result" resultMap="resultListResultMap"/>
+
+    </resultMap>
+
+    <resultMap id="childListResultMap" type="Child">
+        <id property="id" column="child_id"/>
+        <result property="contrastId" column="child_contrast_id"/>
+        <result property="childfileName" column="childfile_name"/>
+        <result property="childfileUrl" column="childfile_url"/>
+    </resultMap>
+
+    <resultMap id="resultListResultMap" type="Result">
+        <id property="id" column="result_id"/>
+        <result property="contrastId" column="result_contrast_id"/>
+        <result property="childId" column="child_id"/>
+        <result property="resultfileName" column="resultfile_name"/>
+        <result property="resultfileUrl" column="resultfile_url"/>
+        <result property="resultfileHtml" column="resultfile_html"/>
+    </resultMap>
+
+    <select id="selectContrastList" parameterType="java.util.Map" resultMap="childListResultMap">
+        SELECT c.id,c.contrast_name,c.fatherfile_url,c.fatherfile_name,c.create_timestamp,
+        ch.id, ch.contrast_id As child_contrast_id, ch.childfile_name, ch.childfile_url,
+        r.id, r.contrast_id As result_contrast_id, r.child_id, r.childfile_name, r.childfile_url, r.childfile_html,
+        from contrast AS c
+        left join child AS ch on c.id=ch.contrast_id
+        left join result AS r on c.id=r.contrast_id
+        <where>
+            <if test="id != null'">and c.id = #{id}</if>
+        </where>
+    </select>
+
+    <insert id="insertContrast" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
+        insert into contrast
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="contrastName != null and contrastName != ''">contrast_name,</if>
+            <if test="fatherfileUrl != null and fatherfileUrl != ''">fatherfile_url,</if>
+            <if test="fatherfileName != null  and fatherfileName != ''">fatherfile_name,</if>
+            <if test="createTimestamp != null  and createTimestamp != ''">create_timestamp,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="contrastName != null and contrastName != ''">#{contrastName},</if>
+            <if test="fatherfileUrl != null and fatherfileUrl != ''">#{fatherfileUrl},</if>
+            <if test="fatherfileName != null  and fatherfileName != ''">SUBSTRING_INDEX(#{fatherfileName},'______', -1),</if>
+            <if test="createTimestamp != null">#{createTimestamp},</if>
+        </trim>
+    </insert>
+
+    <insert id="insertChild" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
+        insert into child
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="contrastId != null'">contrast_id,</if>
+            <if test="childfileName != null and childfileName != ''">childfile_name,</if>
+            <if test="childfileUrl != null and childfileUrl != ''">childfile_url,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="contrastId != null">#{contrastId},</if>
+            <if test="childfileName != null and childfileName != ''">SUBSTRING_INDEX(#{childfileName},'______', -1),</if>
+            <if test="childfileUrl != null and childfileUrl != ''">#{childfileUrl},</if>
+        </trim>
+    </insert>
+
+    <insert id="insertResult" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
+        insert into result
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="contrastId != null'">contrast_id,</if>
+            <if test="childId != null'">child_id,</if>
+            <if test="resultfileName != null and resultfileName != ''">resultfile_name,</if>
+            <if test="resultfileUrl != null and resultfileUrl != ''">resultfile_url,</if>
+            <if test="resultfileHtml != null  and resultfileHtml != ''">resultfile_html,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="contrastId != null">#{contrastId},</if>
+            <if test="childId != null">#{childId},</if>
+            <if test="resultfileName != null and resultfileName != ''">SUBSTRING_INDEX(#{resultfileName},'______', -1),</if>
+            <if test="resultfileUrl != null and resultfileUrl != ''">#{resultfileUrl},</if>
+            <if test="resultfileHtml != null  and resultfileHtml != ''">#{resultfileHtml},</if>
+        </trim>
+    </insert>
+</mapper>
