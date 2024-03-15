@@ -44,8 +44,6 @@ public class ContrastController {
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
-    private FileLoader fileLoader;
-    @Autowired
     private ContrastMapper contrastMapper;
 
     @Transactional
@@ -210,7 +208,7 @@ public class ContrastController {
         }
         // 保存文档到D盘
         try {
-            FileOutputStream out = new FileOutputStream(result.getResultfileName().substring(result.getResultfileName().lastIndexOf("______") + 6));
+            FileOutputStream out = new FileOutputStream(resultUrl + result.getResultfileName());
             document.write(out);
             out.close();
         } catch (IOException e) {
