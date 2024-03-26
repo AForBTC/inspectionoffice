@@ -49,26 +49,26 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="contrastName != null and contrastName != ''">contrast_name,</if>
             <if test="fatherfileUrl != null and fatherfileUrl != ''">fatherfile_url,</if>
             <if test="fatherfileName != null  and fatherfileName != ''">fatherfile_name,</if>
-            <if test="createTimestamp != null  and createTimestamp != ''">create_timestamp,</if>
+            <if test="createTimestamp != null">create_timestamp,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastName != null and contrastName != ''">#{contrastName},</if>
             <if test="fatherfileUrl != null and fatherfileUrl != ''">#{fatherfileUrl},</if>
-            <if test="fatherfileName != null  and fatherfileName != ''">SUBSTRING_INDEX(#{fatherfileName},'______', -1),</if>
+            <if test="fatherfileName != null  and fatherfileName != ''">#{fatherfileName},</if>
             <if test="createTimestamp != null">#{createTimestamp},</if>
         </trim>
     </insert>
 
-    <insert id="insertChild" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insertChild" parameterType="Child" useGeneratedKeys="true" keyProperty="id">
         insert into child
         <trim prefix="(" suffix=")" suffixOverrides=",">
-            <if test="contrastId != null'">contrast_id,</if>
+            <if test="contrastId != null">contrast_id,</if>
             <if test="childfileName != null and childfileName != ''">childfile_name,</if>
             <if test="childfileUrl != null and childfileUrl != ''">childfile_url,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastId != null">#{contrastId},</if>
-            <if test="childfileName != null and childfileName != ''">SUBSTRING_INDEX(#{childfileName},'______', -1),</if>
+            <if test="childfileName != null and childfileName != ''">#{childfileName},</if>
             <if test="childfileUrl != null and childfileUrl != ''">#{childfileUrl},</if>
         </trim>
     </insert>
@@ -76,8 +76,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     <insert id="insertResult" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
         insert into result
         <trim prefix="(" suffix=")" suffixOverrides=",">
-            <if test="contrastId != null'">contrast_id,</if>
-            <if test="childId != null'">child_id,</if>
+            <if test="contrastId != null">contrast_id,</if>
+            <if test="childId != null">child_id,</if>
             <if test="resultfileName != null and resultfileName != ''">resultfile_name,</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">resultfile_url,</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">resultfile_html,</if>
@@ -85,7 +85,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastId != null">#{contrastId},</if>
             <if test="childId != null">#{childId},</if>
-            <if test="resultfileName != null and resultfileName != ''">SUBSTRING_INDEX(#{resultfileName},'______', -1),</if>
+            <if test="resultfileName != null and resultfileName != ''">#{resultfileName},</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">#{resultfileUrl},</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">#{resultfileHtml},</if>
         </trim>
