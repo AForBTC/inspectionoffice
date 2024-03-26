@@ -48,6 +48,8 @@ public class ContrastController {
     private String resultUrl;
     @Value("${contrast.uploadDir}")
     private String uploadDir;
+    @Value("${contrast.getfile.url}")
+    private String getfileUrl;
     @Autowired
     private RestTemplate restTemplate;
     @Autowired
@@ -185,62 +187,64 @@ public class ContrastController {
         titleRun.setText("对比结果" + child.getChildfileName());
         titleRun.setBold(true);
         titleRun.setFontSize(14);
-        addSection(document, "1.1风险点审查结果", null);
+        addSection(document, "1.1风险点审查结果", null, null);
         JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
         JSONArray correct = riskpoint_review.getJSONArray("correct");
-        StringBuilder  xiugaifengxiandian = new StringBuilder();
+        addSection(document, "1.1.1修改的风险点", null, null);
         for (Object correctobj : correct){
             JSONObject correctJsonObj = (JSONObject) correctobj;
             String superior_risk = correctJsonObj.getString("superior_risk");
-            String subordinate_risk = correctJsonObj.getString("subordinate_risk");
-            xiugaifengxiandian.append("\n上级风险点: " + superior_risk);
-            xiugaifengxiandian.append("\n下级风险点: " + subordinate_risk);
+            JSONArray subordinate_risk = correctJsonObj.getJSONArray("subordinate_risk");
+            addSection(document, null, "上级风险点: " + superior_risk, null);
+            addSection(document, null, "下级风险点: ", null);
+            for (Object s : subordinate_risk){
+                String sStr = (String) s;
+                addSection(document, null, null, sStr);
+            }
         }
-        addSection(document, "1.1.1修改的风险点", xiugaifengxiandian.toString());
         JSONArray delete = riskpoint_review.getJSONArray("delete");
-        StringBuilder  shanchufengxiandian = new StringBuilder();
+        addSection(document, "1.1.2删除的风险点", null, null);
         for (Object correctobj : delete){
             String correctJsonObj = (String) correctobj;
-            shanchufengxiandian.append("\n" + correctJsonObj);
+            addSection(document, null, correctJsonObj, null);
+
         }
-        addSection(document, "1.1.2删除的风险点", shanchufengxiandian.toString());
         JSONArray add = riskpoint_review.getJSONArray("add");
-        StringBuilder  zhengjiafengxiandian = new StringBuilder();
+        addSection(document, "1.1.3增加的风险点", null, null);
         for (Object correctobj : add){
             String correctJsonObj = (String) correctobj;
-            zhengjiafengxiandian.append("\n" + correctJsonObj);
+            addSection(document, null, correctJsonObj, null);
+
         }
-        addSection(document, "1.1.3增加的风险点", zhengjiafengxiandian.toString());
-        addSection(document, "1.2防控措施审查结果", null);
+        addSection(document, "1.2防控措施审查结果", null, null);
         JSONArray measures_review = resObj.getJSONArray("measures_review");
         if(measures_review != null && measures_review.size() > 0){
             for(int i = 0; i < measures_review.size(); i++){
                 JSONObject o = (JSONObject) measures_review.get(i);
-                addSection(document, i+ ")", null);
-                addSection(document, "上級风险点:" +  o.getString("subordinate_risk"), null);
-                StringBuilder  fangkongcuoshi = new StringBuilder();
+                addSection(document, i+ ")", null, null);
+                addSection(document, "上級风险点:" +  o.getString("subordinate_risk"), null, null);
+                addSection(document, "下級风险点:" + o.getString("superior_risk"), null, null);
                 JSONArray addC = o.getJSONArray("add");
-                fangkongcuoshi.append("增加防控措施:");
+                addSection(document, null, "增加防控措施:", null);
                 for (Object a : addC){
                     String correctJsonObj = (String) a;
-                    fangkongcuoshi.append("\n     " + correctJsonObj);
+                    addSection(document, null, null, correctJsonObj);
                 }
                 JSONArray correctC = o.getJSONArray("correct");
-                fangkongcuoshi.append("\n修改防控措施:");
+                addSection(document, null, "修改防控措施:", null);
                 for (Object c : correctC){
                     JSONObject correctJsonObj = (JSONObject) c;
                     String superior_measures = correctJsonObj.getString("superior_measures");
                     String subordinate_measures = correctJsonObj.getString("subordinate_measures");
-                    xiugaifengxiandian.append("\n     上级防控措施: " + superior_measures);
-                    xiugaifengxiandian.append("\n     下级防控措施: " + subordinate_measures);
+                    addSection(document, null, null, "上级防控措施: " + superior_measures);
+                    addSection(document, null, null, "下级防控措施: " + subordinate_measures);
                 }
                 JSONArray delC = o.getJSONArray("del");
-                fangkongcuoshi.append("\n删除防控措施:");
+                addSection(document, null, "删除防控措施:", null);
                 for (Object d : delC){
                     String correctJsonObj = (String) d;
-                    fangkongcuoshi.append("\n     " + correctJsonObj);
+                    addSection(document, null, null, correctJsonObj);
                 }
-                addSection(document, "下級风险点:" + o.getString("superior_risk"), fangkongcuoshi.toString());
             }
         }
 
@@ -285,19 +289,29 @@ public class ContrastController {
         list.add(result);
     }
 
-    private void addSection(XWPFDocument document, String sectionTitle, String sectionContent) {
-        XWPFParagraph sectionTitlePara = document.createParagraph();
-        sectionTitlePara.setAlignment(ParagraphAlignment.LEFT);
-        XWPFRun sectionTitleRun = sectionTitlePara.createRun();
-//        sectionTitleRun.setBold(true);
-        sectionTitleRun.setText(sectionTitle);
+    private void addSection(XWPFDocument document, String sectionTitle, String sectionContent, String sectionContent2) {
+        if (sectionTitle != null && !sectionTitle.equals("")) {
+            XWPFParagraph sectionTitlePara = document.createParagraph();
+            sectionTitlePara.setAlignment(ParagraphAlignment.LEFT);
+            XWPFRun sectionTitleRun = sectionTitlePara.createRun();
+            sectionTitleRun.setText(sectionTitle);
+        }
         if (sectionContent != null && !sectionContent.equals("")) {
             XWPFParagraph sectionContentPara = document.createParagraph();
             sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
-            sectionContentPara.setIndentationFirstLine(500);
+            sectionContentPara.setIndentationFirstLine(400);
             XWPFRun sectionContentRun = sectionContentPara.createRun();
             sectionContentRun.setText(sectionContent);
         }
+
+        if (sectionContent2 != null && !sectionContent2.equals("")) {
+            XWPFParagraph sectionContentPara = document.createParagraph();
+            sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
+            sectionContentPara.setIndentationFirstLine(800);
+            XWPFRun sectionContentRun = sectionContentPara.createRun();
+            sectionContentRun.setText(sectionContent2);
+        }
+
     }
 
     private String convertWorkbookToString(XWPFDocument document) throws IOException {
