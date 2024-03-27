@@ -327,7 +327,6 @@ public class ContrastController {
         contrastMapper.insertResult(result);
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
-        list.add(result);
     }
 
     private String getFXName(String substring){
@@ -335,7 +334,7 @@ public class ContrastController {
         if(substring.contains("区县")){
             upStr = "区县";
         }else if(substring.contains("市公司")){
-            upStr = "市公司";
+            upStr = "市";
         } else{
             boolean containsCity = false; // 标志位，表示是否包含城市名称
             for (String city : cities) {
@@ -345,7 +344,7 @@ public class ContrastController {
                 }
             }
             if (containsCity) {
-                upStr = "市公司";
+                upStr = "市";
             } else {
                 if(substring.contains("政企")){
                     upStr = "政企 ";
