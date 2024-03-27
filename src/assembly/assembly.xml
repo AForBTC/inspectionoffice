@@ -50,7 +50,7 @@
                 <!-- 可以指定单个文件 -->
                 <!--<include>project.config</include>-->
                 <!-- 可以直接指定所有文件 -->
-                <include>*.*</include>
+                <include>**/*</include>
             </includes>
         </fileSet>
         <fileSet>
