@@ -36,6 +36,5 @@ HEAP_OPTS="-Xmx4G -Xms1G"
 LOG_PATH="${BASE_PATH}/logs"
 
 echo ${BASE_PATH}
-echo $BASE_PATH
 
-nohup java -jar $HEAP_OPTS  -Dproject.home=${BASE_PATH} -Dinspectionoffice-ws.log=${LOG_PATH} -Dlogging.config=${LOG_FILE} -Dspring.config.location=${ConfigLocation} -XX:HeapDumpPath=$BASE_PATH/inspectionoffice-ws/integration.hprof $BASE_PATH/inspectionoffice-ws.jar  -Djava.ext.dirs=$JAVA_HOME/lib >$BASE_PATH/inspectionoffice-ws.log
+nohup java -jar $HEAP_OPTS  -Dproject.home=${BASE_PATH} -Dinspectionoffice-ws.log=${LOG_PATH} -Dlogging.config=${LOG_FILE} -Dspring.config.location=${ConfigLocation} -XX:HeapDumpPath=$BASE_PATH/inspectionoffice-ws/integration.hprof $BASE_PATH/inspectionoffice-ws.jar  -Djava.ext.dirs=$JAVA_HOME/lib >$BASE_PATH/inspectionoffice-ws.log >/dev/null 2>&1 &
