@@ -12,5 +12,6 @@ public class Result {
     private String resultfileName;
     private String resultfileUrl;
     private String resultfileHtml;
+    private String resultfileHtmlUrl;
 
 }

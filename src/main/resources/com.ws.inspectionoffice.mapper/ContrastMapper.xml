@@ -22,11 +22,12 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="resultfileName" column="resultfile_name"/>
         <result property="resultfileUrl" column="resultfile_url"/>
         <result property="resultfileHtml" column="resultfile_html"/>
+        <result property="resultfileHtmlUrl" column="resultfileHtml_url"/>
     </resultMap>
 
     <select id="selectContrastList" parameterType="Contrast" resultMap="ContrastResult">
         SELECT co.id,co.contrast_name,co.fatherfile_url,co.fatherfile_name,co.create_timestamp,
-        r.id  AS result_id, r.contrast_id, r.childfile_name, r.childfile_url, r.riskpoint_total, r.resultfile_name, r.resultfile_url, r.resultfile_html
+        r.id  AS result_id, r.contrast_id, r.childfile_name, r.childfile_url, r.riskpoint_total, r.resultfile_name, r.resultfile_url, r.resultfile_html,r.resultfileHtml_url
         from contrast AS co
         left join result AS r on co.id=r.contrast_id
         <where>
@@ -61,6 +62,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="resultfileName != null and resultfileName != ''">resultfile_name,</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">resultfile_url,</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">resultfile_html,</if>
+            <if test="resultfileHtmlUrl != null  and resultfileHtmlUrl != ''">resultfileHtml_url,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastId != null">#{contrastId},</if>
@@ -70,6 +72,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="resultfileName != null and resultfileName != ''">#{resultfileName},</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">#{resultfileUrl},</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">#{resultfileHtml},</if>
+            <if test="resultfileHtmlUrl != null  and resultfileHtmlUrl != ''">#{resultfileHtmlUrl},</if>
         </trim>
     </insert>
 </mapper>

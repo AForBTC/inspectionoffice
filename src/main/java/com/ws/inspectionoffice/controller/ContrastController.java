@@ -138,12 +138,25 @@ public class ContrastController {
     }
 
     @GetMapping("/info")
-    public JsonResponse contrastInfo(Long contrastId){
+    public JsonResponse contrastInfo(Long contrastId) throws IOException {
         Contrast contrast = new Contrast();
         contrast.setId(contrastId);
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
         if(contrasts != null && contrasts.size() > 0){
             setReqUrl(contrasts.get(0));
+            for(Result result : contrasts.get(0).getResultList()){
+                // 读取txt文件内容
+                StringBuilder txtContent = new StringBuilder();
+                BufferedReader txtReader = new BufferedReader(new FileReader(result.getResultfileHtmlUrl()));
+                String line;
+                while ((line = txtReader.readLine()) != null) {
+                    txtContent.append(line);
+                    txtContent.append("\n"); // 添加换行符
+                }
+                txtReader.close();
+                String txtString = txtContent.toString();
+                result.setResultfileHtml(txtString);
+            }
         }
         return  new JsonResponse().code(ResponseCode.OK).data(contrasts.get(0));
     }
@@ -152,8 +165,7 @@ public class ContrastController {
     public JsonResponse addFiles(@RequestParam("file") MultipartFile file){
         UUID uuid = UUID.randomUUID();
         File uploadDirectory = null;
-        //TODO
-        uploadDirectory = new File("D:\\" + uploadDir + "/" + uuid);
+        uploadDirectory = new File(uploadDir + "/" + uuid);
         String originalFilename = file.getOriginalFilename();
 
         // 如果目录不存在，则创建目录
@@ -169,6 +181,8 @@ public class ContrastController {
             return new JsonResponse().code(ResponseCode.ERROR_SERVER_ERROR);
         }
     }
+
+
 
     private ByteArrayResource getFile(String url) {
         Path path = Paths.get(url);
@@ -299,6 +313,7 @@ public class ContrastController {
         }
 
         // 保存文档到D盘
+        String html = null;
         try {
             UUID uuid = UUID.randomUUID();
             FileOutputStream out = null;
@@ -311,18 +326,18 @@ public class ContrastController {
             result.setResultfileUrl(url + "/" + result.getResultfileName());
             document.write(out);
             out.close();
-        } catch (IOException e) {
-            throw new MobileModelException("服务器异常");
-        }
-        String html = null;
-        try {
             html = convertWorkbookToString(document);
+            String txtFileName = result.getResultfileName().replace(".docx", ".txt");
+            String txtFilePath = url + "/" + txtFileName;
+            FileWriter txtWriter = new FileWriter(txtFilePath);
+            txtWriter.write(html);
+            txtWriter.close();
+            result.setResultfileHtmlUrl(txtFilePath);
         } catch (IOException e) {
-            e.printStackTrace();
             throw new MobileModelException("服务器异常");
         }
-        result.setResultfileHtml(html);
         contrastMapper.insertResult(result);
+        result.setResultfileHtml(html);
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
     }

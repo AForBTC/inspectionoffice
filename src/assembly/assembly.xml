@@ -33,6 +33,17 @@
         </fileSet>
         <fileSet>
             <!-- 配置项目中需要被打包的文件的存储路径 -->
+            <directory>${project.basedir}/src/sql</directory>
+            <outputDirectory></outputDirectory>
+            <includes>
+                <!-- 可以指定单个文件 -->
+                <!--<include>project.config</include>-->
+                <!-- 可以直接指定所有文件 -->
+                <include>*.*</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <!-- 配置项目中需要被打包的文件的存储路径 -->
             <directory>${project.basedir}/src/main/resources</directory>
             <outputDirectory>/config</outputDirectory>
             <includes>

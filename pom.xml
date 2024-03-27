@@ -9,12 +9,13 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.ws</groupId>
-    <artifactId>inspectionoffice</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>inspectionoffice-ws</name>
-    <description>Demo project for Spring Boot</description>
+    <artifactId>inspectionoffice-ws</artifactId>
+    <version>1.0.0</version>
+
     <properties>
-        <java.version>8</java.version>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <dependencies>
         <dependency>
@@ -133,7 +134,7 @@
                             <!-- 这个jar所依赖的jar包添加classPath的时候的前缀，如果这个jar本身和依赖包在同一级目录，则不需要添加-->
                             <classpathPrefix>lib/</classpathPrefix>
                             <!-- jar启动入口类-->
-                            <mainClass>com.ws.inspectionoffice</mainClass>
+                            <mainClass>com.ws.inspectionoffice.InspectionofficeApplication</mainClass>
                         </manifest>
                         <!--指定配置文件目录，这样jar运行时会去找到同目录下的config文件夹下查找-->
                         <manifestEntries>
@@ -160,18 +161,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
             </plugin>
         </plugins>
     </build>
