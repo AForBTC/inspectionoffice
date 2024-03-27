@@ -26,7 +26,7 @@ public class RestTemplateConfig {
         // 连接超时
         requestFactory.setConnectTimeout(5000);
         //读超时
-        requestFactory.setReadTimeout(500000);
+        requestFactory.setReadTimeout(1200000);
         //连接池获取连接超时时间
         requestFactory.setConnectionRequestTimeout(5000);
 

@@ -14,9 +14,8 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -71,8 +70,8 @@ public class ContrastController {
     public JsonResponse contrast(@RequestBody Body postBody) {
         Contrast contrast = new Contrast();
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+
         ArrayList<Object> objects = new ArrayList<>();
-        HashMap<String, Object> map = new HashMap<>();
         ByteArrayResource file = getFile(getNoReqPath(postBody.getFatherUrl()));
         contrast.setFatherfileUrl(getNoReqPath(postBody.getFatherUrl()));
         contrast.setFatherfileName(file.getFilename());
@@ -80,8 +79,7 @@ public class ContrastController {
         contrast.setContrastName(modifiedFilename);
         contrast.setCreateTimestamp(new Date());
         contrastMapper.insertContrast(contrast);
-        map.put("file1",file);
-        objects.add(map);
+        body.add("file1", new FileSystemResource(new File(getNoReqPath(postBody.getFatherUrl()))));
         ArrayList<Result> results = new ArrayList<>();
         String[] arr = postBody.getChildUrlList().split(",");
         for (String childUrl : arr){
@@ -94,21 +92,21 @@ public class ContrastController {
             result.setChildfileName(fileC.getFilename());
             result.setContrastId(contrast.getId());
             results.add(result);
+            body.add("file1", new FileSystemResource(new File(getNoReqPath(childUrl))));
         }
-        body.put("files", objects);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-//        String res = responseEntity.getBody();
-        Path path = Paths.get("D://a.txt");
-        byte[] bytes = new byte[0];
-        try {
-            bytes = Files.readAllBytes(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String res =  new String(bytes);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+        String res = responseEntity.getBody();
+//        Path path = Paths.get("D://a.txt");
+//        byte[] bytes = new byte[0];
+//        try {
+//            bytes = Files.readAllBytes(path);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        String res =  new String(bytes);
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
