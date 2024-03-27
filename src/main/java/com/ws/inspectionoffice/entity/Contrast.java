@@ -13,6 +13,5 @@ public class Contrast {
     private String fatherfileName;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTimestamp;
-    private List<Child> childList;
     private List<Result> resultList;
 }

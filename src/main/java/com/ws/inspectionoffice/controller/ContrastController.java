@@ -4,20 +4,13 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ws.inspectionoffice.MobileModelException;
-import com.ws.inspectionoffice.entity.Child;
 import com.ws.inspectionoffice.entity.Contrast;
 import com.ws.inspectionoffice.entity.Result;
 import com.ws.inspectionoffice.mapper.ContrastMapper;
 import com.ws.inspectionoffice.model.Body;
 import com.ws.inspectionoffice.utils.JsonResponse;
 import com.ws.inspectionoffice.utils.ResponseCode;
-import fr.opensagres.poi.xwpf.converter.xhtml.XHTMLConverter;
-import fr.opensagres.poi.xwpf.converter.xhtml.XHTMLOptions;
 import org.apache.poi.xwpf.usermodel.*;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -33,7 +26,6 @@ import org.springframework.web.multipart.MultipartFile;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -55,6 +47,25 @@ public class ContrastController {
     @Autowired
     private ContrastMapper contrastMapper;
 
+    private String[] cities = {
+            "济南",
+            "青岛",
+            "淄博",
+            "枣庄",
+            "东营",
+            "烟台",
+            "潍坊",
+            "济宁",
+            "泰安",
+            "威海",
+            "日照",
+            "临沂",
+            "德州",
+            "聊城",
+            "滨州",
+            "菏泽"
+    };
+
     @Transactional
     @PostMapping("/contrast")
     public JsonResponse contrast(@RequestBody Body postBody) {
@@ -71,19 +82,18 @@ public class ContrastController {
         contrastMapper.insertContrast(contrast);
         map.put("file1",file);
         objects.add(map);
-        ArrayList<Child> childList = new ArrayList<>();
+        ArrayList<Result> results = new ArrayList<>();
         String[] arr = postBody.getChildUrlList().split(",");
         for (String childUrl : arr){
-            Child child = new Child();
+            Result result = new Result();
             HashMap<String, Object> mapC = new HashMap<>();
             ByteArrayResource fileC = getFile(getNoReqPath(childUrl));
             mapC.put("file1",fileC);
             objects.add(mapC);
-            child.setChildfileUrl(getNoReqPath(childUrl));
-            child.setChildfileName(fileC.getFilename());
-            child.setContrastId(contrast.getId());
-            contrastMapper.insertChild(child);
-            childList.add(child);
+            result.setChildfileUrl(getNoReqPath(childUrl));
+            result.setChildfileName(fileC.getFilename());
+            result.setContrastId(contrast.getId());
+            results.add(result);
         }
         body.put("files", objects);
         HttpHeaders headers = new HttpHeaders();
@@ -103,12 +113,11 @@ public class ContrastController {
         String code = resObject.getString("code");
         if(code.equals("0")){
             JSONArray dataJsonArr = resObject.getJSONArray("data");
-            ArrayList<Result> results = new ArrayList<>();
             for(Object data : dataJsonArr){
                 JSONObject dataObj = (JSONObject) data;
                 String filename = dataObj.getString("filename");
-                Optional<Child> fileOptional = childList.stream()
-                        .filter(child -> child.getChildfileName().startsWith(filename))
+                Optional<Result> fileOptional = results.stream()
+                        .filter(result -> result.getChildfileName().startsWith(filename))
                         .findFirst();
                 createResultDocx(dataObj,contrast,fileOptional.get(), results);
             }
@@ -123,7 +132,9 @@ public class ContrastController {
         Contrast contrast = new Contrast();
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
         for (Contrast contrastC : contrasts){
-            setReqUrl(contrastC);
+            contrastC.setFatherfileName(null);
+            contrastC.setFatherfileUrl(null);
+            contrastC.setResultList(null);
         }
         return  new JsonResponse().code(ResponseCode.OK).data(contrasts);
     }
@@ -182,20 +193,53 @@ public class ContrastController {
         return path.substring(path.indexOf(uploadDir));
     }
 
-    private void createResultDocx(JSONObject resObj, Contrast contrast, Child child, List<Result> list){
-        Result result = new Result();
-        result.setContrastId(contrast.getId());
-        result.setChildId(child.getId());
-        result.setResultfileName("对比结果" + child.getChildfileName().substring(0, child.getChildfileName().lastIndexOf(".")) + ".docx");
+    private void createResultDocx(JSONObject resObj, Contrast contrast, Result result, List<Result> list){
+        String fatherfileName = contrast.getFatherfileName();
+        String upStr = null;
+        if(fatherfileName.contains("_")){
+            String substring = fatherfileName.substring(fatherfileName.lastIndexOf("_"));
+            upStr = getFXName(substring);
+            if(upStr == null){
+                upStr = getFXName(fatherfileName);
+                if (upStr == null){
+                    upStr = "省";
+                }
+            }
+        } else {
+            upStr = getFXName(fatherfileName);
+            if (upStr == null){
+                upStr = "省";
+            }
+        }
+        String childfileName = result.getChildfileName();
+        String downStr = null;
+        if(childfileName.contains("_")){
+            String substring = childfileName.substring(childfileName.lastIndexOf("_"));
+            downStr = getFXName(substring);
+            if(downStr == null){
+                downStr = getFXName(childfileName);
+                if (upStr == null){
+                    downStr = "下级";
+                }
+            }
+        } else {
+            downStr = getFXName(childfileName);
+            if (downStr == null){
+                downStr = "下级";
+            }
+        }
+        result.setResultfileName("对比结果" + result.getChildfileName().substring(0, result.getChildfileName().lastIndexOf(".")) + ".docx");
         XWPFDocument document = new XWPFDocument();
         // 添加标题
         XWPFParagraph title = document.createParagraph();
         title.setAlignment(ParagraphAlignment.CENTER);
         XWPFRun titleRun = title.createRun();
-        titleRun.setText("对比结果" + child.getChildfileName());
+        titleRun.setText("对比结果" + result.getChildfileName());
         titleRun.setBold(true);
         titleRun.setFontSize(14);
         addSection(document, "1.1风险点审查结果", null, null);
+        String riskpointTotal = resObj.getString("riskpoint_quantity");
+        result.setRiskpointTotal(Integer.parseInt(riskpointTotal));
         JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
         JSONArray correct = riskpoint_review.getJSONArray("correct");
         addSection(document, "1.1.1修改的风险点", null, null);
@@ -203,8 +247,8 @@ public class ContrastController {
             JSONObject correctJsonObj = (JSONObject) correctobj;
             String superior_risk = correctJsonObj.getString("superior_risk");
             JSONArray subordinate_risk = correctJsonObj.getJSONArray("subordinate_risk");
-            addSection(document, null, "上级风险点: " + superior_risk, null);
-            addSection(document, null, "下级风险点: ", null);
+            addSection(document, null, upStr + "风险点: " + superior_risk, null);
+            addSection(document, null, downStr + "风险点: ", null);
             for (Object s : subordinate_risk){
                 String sStr = (String) s;
                 addSection(document, null, null, sStr);
@@ -230,8 +274,8 @@ public class ContrastController {
             for(int i = 0; i < measures_review.size(); i++){
                 JSONObject o = (JSONObject) measures_review.get(i);
                 addSection(document, i+ ")", null, null);
-                addSection(document, "上級风险点:" +  o.getString("subordinate_risk"), null, null);
-                addSection(document, "下級风险点:" + o.getString("superior_risk"), null, null);
+                addSection(document, upStr + "风险点: "+  o.getString("subordinate_risk"), null, null);
+                addSection(document, downStr + "风险点: "+ o.getString("superior_risk"), null, null);
                 JSONArray addC = o.getJSONArray("add");
                 addSection(document, null, "增加防控措施:", null);
                 for (Object a : addC){
@@ -244,8 +288,8 @@ public class ContrastController {
                     JSONObject correctJsonObj = (JSONObject) c;
                     String superior_measures = correctJsonObj.getString("superior_measures");
                     String subordinate_measures = correctJsonObj.getString("subordinate_measures");
-                    addSection(document, null, null, "上级防控措施: " + superior_measures);
-                    addSection(document, null, null, "下级防控措施: " + subordinate_measures);
+                    addSection(document, null, null, upStr + "防控措施: " + superior_measures);
+                    addSection(document, null, null, downStr + "防控措施: " + subordinate_measures);
                 }
                 JSONArray delC = o.getJSONArray("del");
                 addSection(document, null, "删除防控措施:", null);
@@ -282,7 +326,35 @@ public class ContrastController {
         result.setResultfileHtml(html);
         contrastMapper.insertResult(result);
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
+        result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
         list.add(result);
+    }
+
+    private String getFXName(String substring){
+        String upStr = null;
+        if(substring.contains("区县")){
+            upStr = "区县";
+        }else if(substring.contains("市公司")){
+            upStr = "市公司";
+        } else{
+            boolean containsCity = false; // 标志位，表示是否包含城市名称
+            for (String city : cities) {
+                if (substring.contains(city)) {
+                    containsCity = true;
+                    break;
+                }
+            }
+            if (containsCity) {
+                upStr = "市公司";
+            } else {
+                if(substring.contains("政企")){
+                    upStr = "政企 ";
+                } else if(substring.contains("省")){
+                    upStr = "省";
+                }
+            }
+        }
+        return upStr;
     }
 
     private void addSection(XWPFDocument document, String sectionTitle, String sectionContent, String sectionContent2) {
@@ -315,7 +387,6 @@ public class ContrastController {
         for (XWPFParagraph paragraph : paragraphs) {
             String paragraphHtml = convertParagraphToHtml_p(paragraph);
             html.append(paragraphHtml);
-//            html.append("<p>").append(paragraph.getText()).append("</p>");
         }
         html.append("</body></html>");
         return html.toString();
@@ -345,13 +416,10 @@ public class ContrastController {
     }
 
     private void setReqUrl(Contrast contrast){
-        contrast.setFatherfileName(getfileUrl + contrast.getFatherfileUrl());
-        List<Child> childList = contrast.getChildList();
-        for(Child child : childList){
-            child.setChildfileUrl(getfileUrl + child.getChildfileUrl());
-        }
+        contrast.setFatherfileUrl(getfileUrl + contrast.getFatherfileUrl());
         List<Result> resultList = contrast.getResultList();
-        for (Result result : resultList){
+        for(Result result : resultList){
+            result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
             result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         }
     }

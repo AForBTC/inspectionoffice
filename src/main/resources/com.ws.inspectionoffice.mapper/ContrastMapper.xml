@@ -10,22 +10,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="fatherfileUrl"    column="fatherfile_url"    />
         <result property="fatherfileName"    column="fatherfile_name"    />
         <result property="createTimestamp"    column="create_timestamp"    />
-        <collection property="childList" ofType="Child" resultMap="childListResultMap"/>
         <collection property="resultList" ofType="Result" resultMap="resultListResultMap"/>
-
-    </resultMap>
-
-    <resultMap id="childListResultMap" type="Child">
-        <id property="id" column="child_id"/>
-        <result property="contrastId" column="child_contrast_id"/>
-        <result property="childfileName" column="childfile_name"/>
-        <result property="childfileUrl" column="childfile_url"/>
     </resultMap>
 
     <resultMap id="resultListResultMap" type="Result">
         <id property="id" column="result_id"/>
-        <result property="contrastId" column="result_contrast_id"/>
-        <result property="childId" column="child_id"/>
+        <result property="contrastId" column="contrast_id"/>
+        <result property="childfileName" column="childfile_name"/>
+        <result property="childfileUrl" column="childfile_url"/>
+        <result property="riskpointTotal" column="riskpoint_total"/>
         <result property="resultfileName" column="resultfile_name"/>
         <result property="resultfileUrl" column="resultfile_url"/>
         <result property="resultfileHtml" column="resultfile_html"/>
@@ -33,14 +26,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 
     <select id="selectContrastList" parameterType="Contrast" resultMap="ContrastResult">
         SELECT co.id,co.contrast_name,co.fatherfile_url,co.fatherfile_name,co.create_timestamp,
-        ch.id AS child_id, ch.contrast_id As child_contrast_id, ch.childfile_name, ch.childfile_url,
-        r.id  AS result_id, r.contrast_id As result_contrast_id, r.child_id, r.resultfile_name, r.resultfile_url, r.resultfile_html
+        r.id  AS result_id, r.contrast_id, r.childfile_name, r.childfile_url, r.riskpoint_total, r.resultfile_name, r.resultfile_url, r.resultfile_html
         from contrast AS co
-        left join child AS ch on co.id=ch.contrast_id
         left join result AS r on co.id=r.contrast_id
         <where>
             <if test="id != null">co.id = #{id}</if>
         </where>
+        ORDER BY co.create_timestamp DESC;
     </select>
 
     <insert id="insertContrast" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
@@ -59,32 +51,22 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         </trim>
     </insert>
 
-    <insert id="insertChild" parameterType="Child" useGeneratedKeys="true" keyProperty="id">
-        insert into child
-        <trim prefix="(" suffix=")" suffixOverrides=",">
-            <if test="contrastId != null">contrast_id,</if>
-            <if test="childfileName != null and childfileName != ''">childfile_name,</if>
-            <if test="childfileUrl != null and childfileUrl != ''">childfile_url,</if>
-        </trim>
-        <trim prefix="values (" suffix=")" suffixOverrides=",">
-            <if test="contrastId != null">#{contrastId},</if>
-            <if test="childfileName != null and childfileName != ''">#{childfileName},</if>
-            <if test="childfileUrl != null and childfileUrl != ''">#{childfileUrl},</if>
-        </trim>
-    </insert>
-
     <insert id="insertResult" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
         insert into result
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="contrastId != null">contrast_id,</if>
-            <if test="childId != null">child_id,</if>
+            <if test="childfileName != null and childfileName != ''">childfile_name,</if>
+            <if test="childfileUrl != null and childfileUrl != ''">childfile_url,</if>
+            <if test="riskpointTotal != null and riskpointTotal != ''">riskpoint_total,</if>
             <if test="resultfileName != null and resultfileName != ''">resultfile_name,</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">resultfile_url,</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">resultfile_html,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastId != null">#{contrastId},</if>
-            <if test="childId != null">#{childId},</if>
+            <if test="childfileName != null and childfileName != ''">#{childfileName},</if>
+            <if test="childfileUrl != null and childfileUrl != ''">#{childfileUrl},</if>
+            <if test="riskpointTotal != null and riskpointTotal != ''">#{riskpointTotal},</if>
             <if test="resultfileName != null and resultfileName != ''">#{resultfileName},</if>
             <if test="resultfileUrl != null and resultfileUrl != ''">#{resultfileUrl},</if>
             <if test="resultfileHtml != null  and resultfileHtml != ''">#{resultfileHtml},</if>

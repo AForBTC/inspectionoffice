@@ -11,7 +11,7 @@
     <groupId>com.ws</groupId>
     <artifactId>inspectionoffice</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>inspectionoffice</name>
+    <name>inspectionoffice-ws</name>
     <description>Demo project for Spring Boot</description>
     <properties>
         <java.version>8</java.version>
@@ -105,7 +105,62 @@
     </dependencies>
 
     <build>
+        <!--打包后的项目名称-->
+        <finalName>${project.artifactId}</finalName>
         <plugins>
+            <!--指定编译的JK版本-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.8.1</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <archive>
+                        <!--生成jar中，不要包含pom.xml和pom.properties这两种文件-->，
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                        <manifest>
+                            <!-- 为依赖包添加路径, 这些路径会写在MANIFEST文件的Class-Path下 -->
+                            <addClasspath>true</addClasspath>
+                            <!-- 这个jar所依赖的jar包添加classPath的时候的前缀，如果这个jar本身和依赖包在同一级目录，则不需要添加-->
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <!-- jar启动入口类-->
+                            <mainClass>com.ws.inspectionoffice</mainClass>
+                        </manifest>
+                        <!--指定配置文件目录，这样jar运行时会去找到同目录下的config文件夹下查找-->
+                        <manifestEntries>
+                            <Class-Path>config/</Class-Path>
+                        </manifestEntries>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <descriptors>
+                        <descriptor>${basedir}\src\assembly\assembly.xml</descriptor>
+                    </descriptors>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -120,5 +175,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>
