@@ -62,8 +62,8 @@ public class ContrastController {
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         ArrayList<Object> objects = new ArrayList<>();
         HashMap<String, Object> map = new HashMap<>();
-        ByteArrayResource file = getFile(postBody.getFatherUrl());
-        contrast.setFatherfileUrl(postBody.getFatherUrl());
+        ByteArrayResource file = getFile(getNoReqPath(postBody.getFatherUrl()));
+        contrast.setFatherfileUrl(getNoReqPath(postBody.getFatherUrl()));
         contrast.setFatherfileName(file.getFilename());
         String modifiedFilename = file.getFilename() + "对比";
         contrast.setContrastName(modifiedFilename);
@@ -72,13 +72,14 @@ public class ContrastController {
         map.put("file1",file);
         objects.add(map);
         ArrayList<Child> childList = new ArrayList<>();
-        for (String childUrl : postBody.getChildUrlList()){
+        String[] arr = postBody.getChildUrlList().split(",");
+        for (String childUrl : arr){
             Child child = new Child();
             HashMap<String, Object> mapC = new HashMap<>();
-            ByteArrayResource fileC = getFile(childUrl);
+            ByteArrayResource fileC = getFile(getNoReqPath(childUrl));
             mapC.put("file1",fileC);
             objects.add(mapC);
-            child.setChildfileUrl(childUrl);
+            child.setChildfileUrl(getNoReqPath(childUrl));
             child.setChildfileName(fileC.getFilename());
             child.setContrastId(contrast.getId());
             contrastMapper.insertChild(child);
@@ -121,6 +122,9 @@ public class ContrastController {
     public JsonResponse history(){
         Contrast contrast = new Contrast();
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
+        for (Contrast contrastC : contrasts){
+            setReqUrl(contrastC);
+        }
         return  new JsonResponse().code(ResponseCode.OK).data(contrasts);
     }
 
@@ -129,18 +133,18 @@ public class ContrastController {
         Contrast contrast = new Contrast();
         contrast.setId(contrastId);
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
-        return  new JsonResponse().code(ResponseCode.OK).data(contrasts);
+        if(contrasts != null && contrasts.size() > 0){
+            setReqUrl(contrasts.get(0));
+        }
+        return  new JsonResponse().code(ResponseCode.OK).data(contrasts.get(0));
     }
 
     @PostMapping("/addFile")
     public JsonResponse addFiles(@RequestParam("file") MultipartFile file){
         UUID uuid = UUID.randomUUID();
         File uploadDirectory = null;
-        if(uploadDir.endsWith("/")){
-            uploadDirectory = new File(uploadDir + uuid);
-        } else{
-            uploadDirectory = new File(uploadDir + "/" + uuid);
-        }
+        //TODO
+        uploadDirectory = new File("D:\\" + uploadDir + "/" + uuid);
         String originalFilename = file.getOriginalFilename();
 
         // 如果目录不存在，则创建目录
@@ -150,7 +154,7 @@ public class ContrastController {
         try {
             // 将文件写入到指定目录
             file.transferTo(new File(uploadDirectory.getAbsolutePath() + "/" + originalFilename));
-            return new JsonResponse().code(ResponseCode.OK).data(uploadDirectory.getAbsolutePath() + "/" + originalFilename);
+            return new JsonResponse().code(ResponseCode.OK).data(getfileUrl + uploadDir + "/" + uuid + "/" + originalFilename);
         } catch (IOException e) {
             e.printStackTrace();
             return new JsonResponse().code(ResponseCode.ERROR_SERVER_ERROR);
@@ -172,6 +176,10 @@ public class ContrastController {
             }
         };
         return resource;
+    }
+
+    private String getNoReqPath(String path){
+        return path.substring(path.indexOf(uploadDir));
     }
 
     private void createResultDocx(JSONObject resObj, Contrast contrast, Child child, List<Result> list){
@@ -252,40 +260,28 @@ public class ContrastController {
         try {
             UUID uuid = UUID.randomUUID();
             FileOutputStream out = null;
-            if(uploadDir.endsWith("/")){
-                String url = resultUrl  + uuid.toString();
-                File file = new File(url);
-                if (!file.exists()) {
-                    file.mkdirs();
-                }
-                out = new FileOutputStream(url + "/" +result.getResultfileName());
-                result.setResultfileUrl(url + "/" +result.getResultfileName()) ;
-            } else{
-                String url = resultUrl + "/"  + uuid.toString();
-                File file = new File(url);
-                if (!file.exists()) {
-                    file.mkdirs();
-                }
-                out = new FileOutputStream(url + "/" + result.getResultfileName());
-
-
-                result.setResultfileUrl(url + "/" + result.getResultfileName());
+            String url = resultUrl + "/"  + uuid.toString();
+            File file = new File(url);
+            if (!file.exists()) {
+                file.mkdirs();
             }
-//            document.createStyles();
+            out = new FileOutputStream(url + "/" + result.getResultfileName());
+            result.setResultfileUrl(url + "/" + result.getResultfileName());
             document.write(out);
             out.close();
         } catch (IOException e) {
             throw new MobileModelException("服务器异常");
         }
         String html = null;
-//        try {
-//            html = convertWorkbookToString(document);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            throw new MobileModelException("服务器异常");
-//        }
+        try {
+            html = convertWorkbookToString(document);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new MobileModelException("服务器异常");
+        }
         result.setResultfileHtml(html);
         contrastMapper.insertResult(result);
+        result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         list.add(result);
     }
 
@@ -303,7 +299,6 @@ public class ContrastController {
             XWPFRun sectionContentRun = sectionContentPara.createRun();
             sectionContentRun.setText(sectionContent);
         }
-
         if (sectionContent2 != null && !sectionContent2.equals("")) {
             XWPFParagraph sectionContentPara = document.createParagraph();
             sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
@@ -315,25 +310,50 @@ public class ContrastController {
     }
 
     private String convertWorkbookToString(XWPFDocument document) throws IOException {
-        try {
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-//            XHTMLOptions options = XHTMLOptions.create();
-//            options.setIgnoreStylesIfUnused(false);
-//            options.setFragment(true);
-            XHTMLConverter.getInstance().convert(document, outputStream, null);
-            String html = new String(outputStream.toByteArray(), StandardCharsets.UTF_8);
+        StringBuilder html = new StringBuilder("<html><head></head><body>");
+        List<XWPFParagraph> paragraphs = document.getParagraphs();
+        for (XWPFParagraph paragraph : paragraphs) {
+            String paragraphHtml = convertParagraphToHtml_p(paragraph);
+            html.append(paragraphHtml);
+//            html.append("<p>").append(paragraph.getText()).append("</p>");
+        }
+        html.append("</body></html>");
+        return html.toString();
+    }
 
-            // 使用Jsoup库处理HTML标签，添加样式等
-            Document doc = Jsoup.parse(html);
-            Elements paragraphs = doc.select("p");
-            for (Element paragraph : paragraphs) {
-                // 根据需要添加样式，例如设置段落对齐方式等
-                paragraph.attr("style", "text-align: left;");
-            }
-            return doc.toString();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
+    private static String convertParagraphToHtml_p(XWPFParagraph paragraph) {
+        StringBuilder paragraphHtml = new StringBuilder("<p>");
+
+        // Apply indentation if present
+        int indentationFirstLine = paragraph.getIndentationFirstLine();
+        if (indentationFirstLine > 0) {
+            // Convert indentation from twips to pixels (assuming 1 twip = 1/20 of a point)
+            int indentationPixels = indentationFirstLine / 20;
+            paragraphHtml.append("<span style=margin-left:").append(indentationPixels).append("px;>");
+        }
+
+        // Append text of the paragraph
+        paragraphHtml.append(paragraph.getText());
+
+        // Close indentation span if present
+        if (indentationFirstLine > 0) {
+            paragraphHtml.append("</span>");
+        }
+
+        paragraphHtml.append("</p>");
+        return paragraphHtml.toString();
+    }
+
+    private void setReqUrl(Contrast contrast){
+        contrast.setFatherfileName(getfileUrl + contrast.getFatherfileUrl());
+        List<Child> childList = contrast.getChildList();
+        for(Child child : childList){
+            child.setChildfileUrl(getfileUrl + child.getChildfileUrl());
+        }
+        List<Result> resultList = contrast.getResultList();
+        for (Result result : resultList){
+            result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         }
     }
+
 }

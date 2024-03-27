@@ -7,5 +7,6 @@ import java.util.List;
 @Data
 public class Body {
     private String fatherUrl;
-    private List<String> childUrlList;
+    private String childUrlList;
+//    private List<String> childUrlList;
 }

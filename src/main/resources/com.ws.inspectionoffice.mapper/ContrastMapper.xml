@@ -31,15 +31,15 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="resultfileHtml" column="resultfile_html"/>
     </resultMap>
 
-    <select id="selectContrastList" parameterType="java.util.Map" resultMap="childListResultMap">
-        SELECT c.id,c.contrast_name,c.fatherfile_url,c.fatherfile_name,c.create_timestamp,
-        ch.id, ch.contrast_id As child_contrast_id, ch.childfile_name, ch.childfile_url,
-        r.id, r.contrast_id As result_contrast_id, r.child_id, r.childfile_name, r.childfile_url, r.childfile_html,
-        from contrast AS c
-        left join child AS ch on c.id=ch.contrast_id
-        left join result AS r on c.id=r.contrast_id
+    <select id="selectContrastList" parameterType="Contrast" resultMap="ContrastResult">
+        SELECT co.id,co.contrast_name,co.fatherfile_url,co.fatherfile_name,co.create_timestamp,
+        ch.id AS child_id, ch.contrast_id As child_contrast_id, ch.childfile_name, ch.childfile_url,
+        r.id  AS result_id, r.contrast_id As result_contrast_id, r.child_id, r.resultfile_name, r.resultfile_url, r.resultfile_html
+        from contrast AS co
+        left join child AS ch on co.id=ch.contrast_id
+        left join result AS r on co.id=r.contrast_id
         <where>
-            <if test="id != null'">and c.id = #{id}</if>
+            <if test="id != null">co.id = #{id}</if>
         </where>
     </select>
 
