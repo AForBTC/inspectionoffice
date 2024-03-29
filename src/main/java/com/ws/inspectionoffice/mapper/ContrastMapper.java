@@ -9,6 +9,8 @@ import java.util.List;
 public interface ContrastMapper {
 
     public List<Contrast> selectContrastList(Contrast contrast);
+    void updateContrast(Contrast contrast);
     public void insertContrast(Contrast contrast);
     public void insertResult(Result result);
+    void deleteContrastById(Long contrastId);
 }

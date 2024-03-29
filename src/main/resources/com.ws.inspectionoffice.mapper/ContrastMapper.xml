@@ -8,6 +8,7 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="id"    column="id"    />
         <result property="contrastName"    column="contrast_name"    />
         <result property="fatherfileUrl"    column="fatherfile_url"    />
+        <result property="zipUrl"    column="zip_url"    />
         <result property="fatherfileName"    column="fatherfile_name"    />
         <result property="createTimestamp"    column="create_timestamp"    />
         <collection property="resultList" ofType="Result" resultMap="resultListResultMap"/>
@@ -25,8 +26,23 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="resultfileHtmlUrl" column="resultfileHtml_url"/>
     </resultMap>
 
+    <update id="updateContrast">
+        update contrast
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="zipUrl != null and zipUrl != ''">zip_url = #{zipUrl}</if>
+        </trim>
+        where id = #{id}
+
+    </update>
+    <delete id="deleteContrastById" parameterType="Long">
+        DELETE t1, t2
+        FROM contrast t1
+        JOIN result t2 ON t1.id = t2.contrast_id
+        WHERE t1.id = #{contrastId}
+    </delete>
+
     <select id="selectContrastList" parameterType="Contrast" resultMap="ContrastResult">
-        SELECT co.id,co.contrast_name,co.fatherfile_url,co.fatherfile_name,co.create_timestamp,
+        SELECT co.id,co.contrast_name,co.fatherfile_url,co.zip_url,co.fatherfile_name,co.create_timestamp,
         r.id  AS result_id, r.contrast_id, r.childfile_name, r.childfile_url, r.riskpoint_total, r.resultfile_name, r.resultfile_url, r.resultfile_html,r.resultfileHtml_url
         from contrast AS co
         left join result AS r on co.id=r.contrast_id
@@ -41,12 +57,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <trim prefix="(" suffix=")" suffixOverrides=",">
             <if test="contrastName != null and contrastName != ''">contrast_name,</if>
             <if test="fatherfileUrl != null and fatherfileUrl != ''">fatherfile_url,</if>
+            <if test="zipUrl != null and zipUrl != ''">zip_url,</if>
             <if test="fatherfileName != null  and fatherfileName != ''">fatherfile_name,</if>
             <if test="createTimestamp != null">create_timestamp,</if>
         </trim>
         <trim prefix="values (" suffix=")" suffixOverrides=",">
             <if test="contrastName != null and contrastName != ''">#{contrastName},</if>
             <if test="fatherfileUrl != null and fatherfileUrl != ''">#{fatherfileUrl},</if>
+            <if test="zipUrl != null and zipUrl != ''">#{zipUrl},</if>
             <if test="fatherfileName != null  and fatherfileName != ''">#{fatherfileName},</if>
             <if test="createTimestamp != null">#{createTimestamp},</if>
         </trim>

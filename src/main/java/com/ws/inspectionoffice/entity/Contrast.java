@@ -11,6 +11,7 @@ public class Contrast {
     private String contrastName;
     private String fatherfileUrl;
     private String fatherfileName;
+    private String zipUrl;
     @JsonFormat(timezone = "GMT+8",pattern = "yyyy-MM-dd HH:mm:ss")
     private Date createTimestamp;
     private List<Result> resultList;

@@ -29,14 +29,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @RestController
 public class ContrastController {
 
     @Value("${contrast.url}")
     private String contrastUrl;
-    @Value("${contrast.result.url}")
-    private String resultUrl;
     @Value("${contrast.uploadDir}")
     private String uploadDir;
     @Value("${contrast.getfile.url}")
@@ -119,7 +119,9 @@ public class ContrastController {
                         .findFirst();
                 createResultDocx(dataObj,contrast,fileOptional.get(), results);
             }
-            return new JsonResponse().code(ResponseCode.OK).data(results);
+            contrast.setResultList(results);
+            createZip(contrast);
+            return new JsonResponse().code(ResponseCode.OK).data(contrast);
         } else {
             throw new MobileModelException("服务器异常");
         }
@@ -133,21 +135,50 @@ public class ContrastController {
             contrastC.setFatherfileName(null);
             contrastC.setFatherfileUrl(null);
             contrastC.setResultList(null);
+            contrastC.setZipUrl(getfileUrl + contrastC.getZipUrl());
         }
         return  new JsonResponse().code(ResponseCode.OK).data(contrasts);
     }
 
-    @GetMapping("/info")
-    public JsonResponse contrastInfo(Long contrastId) throws IOException {
+    @PostMapping("/del")
+    public JsonResponse delete(@RequestBody Map map){
+        Integer contrastIdI = (Integer) map.get("id");
+        Long contrastId = contrastIdI.longValue();
         Contrast contrast = new Contrast();
         contrast.setId(contrastId);
+        Contrast contrastC = contrastMapper.selectContrastList(contrast).get(0);
+        contrastMapper.deleteContrastById(contrastId);
+        try {
+            File file = new File(uploadDir + contrastC.getFatherfileUrl());
+            file.delete();
+            List<Result> resultList = contrastC.getResultList();
+            File zfile = new File(uploadDir + contrastC.getZipUrl());
+            zfile.delete();
+            for(Result result: resultList){
+                File Cfile = new File(uploadDir + result.getChildfileUrl());
+                Cfile.delete();
+                File Rfile = new File(uploadDir + result.getResultfileUrl());
+                Rfile.delete();
+                File Hfile = new File(uploadDir + result.getResultfileHtmlUrl());
+                Hfile.delete();
+            }
+        }catch (Exception e){
+
+        }
+        return  new JsonResponse().code(ResponseCode.OK);
+    }
+
+    @GetMapping("/info")
+    public JsonResponse contrastInfo(@RequestParam Long contrastld) throws IOException {
+        Contrast contrast = new Contrast();
+        contrast.setId(contrastld);
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
         if(contrasts != null && contrasts.size() > 0){
             setReqUrl(contrasts.get(0));
             for(Result result : contrasts.get(0).getResultList()){
                 // 读取txt文件内容
                 StringBuilder txtContent = new StringBuilder();
-                BufferedReader txtReader = new BufferedReader(new FileReader(result.getResultfileHtmlUrl()));
+                BufferedReader txtReader = new BufferedReader(new FileReader(uploadDir + result.getResultfileHtmlUrl()));
                 String line;
                 while ((line = txtReader.readLine()) != null) {
                     txtContent.append(line);
@@ -175,7 +206,7 @@ public class ContrastController {
         try {
             // 将文件写入到指定目录
             file.transferTo(new File(uploadDirectory.getAbsolutePath() + "/" + originalFilename));
-            return new JsonResponse().code(ResponseCode.OK).data(getfileUrl + uploadDir + "/" + uuid + "/" + originalFilename);
+            return new JsonResponse().code(ResponseCode.OK).data(getfileUrl + "/" + uuid + "/" + originalFilename);
         } catch (IOException e) {
             e.printStackTrace();
             return new JsonResponse().code(ResponseCode.ERROR_SERVER_ERROR);
@@ -185,7 +216,7 @@ public class ContrastController {
 
 
     private ByteArrayResource getFile(String url) {
-        Path path = Paths.get(url);
+        Path path = Paths.get(uploadDir + url);
         byte[] fileBytes = new byte[0];
         try {
             fileBytes = Files.readAllBytes(path);
@@ -202,7 +233,7 @@ public class ContrastController {
     }
 
     private String getNoReqPath(String path){
-        return path.substring(path.indexOf(uploadDir));
+        return path.substring(path.indexOf(getfileUrl) + getfileUrl.length());
     }
 
     private void createResultDocx(JSONObject resObj, Contrast contrast, Result result, List<Result> list){
@@ -315,31 +346,57 @@ public class ContrastController {
         // 保存文档到D盘
         String html = null;
         try {
-            UUID uuid = UUID.randomUUID();
             FileOutputStream out = null;
-            String url = resultUrl + "/"  + uuid.toString();
-            File file = new File(url);
-            if (!file.exists()) {
-                file.mkdirs();
-            }
-            out = new FileOutputStream(url + "/" + result.getResultfileName());
-            result.setResultfileUrl(url + "/" + result.getResultfileName());
+            String childurl = result.getChildfileUrl();
+            out = new FileOutputStream((uploadDir + childurl).replaceAll(childfileName, result.getResultfileName()));
+            result.setResultfileUrl(childurl.replaceAll(childfileName, result.getResultfileName()));
             document.write(out);
             out.close();
             html = convertWorkbookToString(document);
-            String txtFileName = result.getResultfileName().replace(".docx", ".txt");
-            String txtFilePath = url + "/" + txtFileName;
-            FileWriter txtWriter = new FileWriter(txtFilePath);
+            String txtFilePath = result.getResultfileUrl().replace(".docx", ".txt");
+            FileWriter txtWriter = new FileWriter(uploadDir + txtFilePath);
             txtWriter.write(html);
             txtWriter.close();
             result.setResultfileHtmlUrl(txtFilePath);
         } catch (IOException e) {
+            e.printStackTrace();
             throw new MobileModelException("服务器异常");
         }
         contrastMapper.insertResult(result);
         result.setResultfileHtml(html);
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
+    }
+
+    private void createZip(Contrast contrast){
+        List<String> filePath = new ArrayList<>();
+        for (Result result : contrast.getResultList()){
+            filePath.add(uploadDir + getNoReqPath(result.getResultfileUrl()));
+        }
+        String[] filePathArr = filePath.toArray(new String[0]);
+        String zipPath = uploadDir + contrast.getFatherfileUrl().replace(".xlsx", ".zip").replace(".xls", ".zip");
+        contrast.setZipUrl(contrast.getFatherfileUrl().replace(".xlsx", ".zip").replace(".xls", ".zip"));
+        contrastMapper.updateContrast(contrast);
+        try {
+            FileOutputStream fos = new FileOutputStream(zipPath);
+            ZipOutputStream zipOut = new ZipOutputStream(fos);
+            for (String fileToCompress : filePathArr) {
+                File file = new File(fileToCompress);
+                FileInputStream fis = new FileInputStream(file);
+                ZipEntry zipEntry = new ZipEntry(file.getName());
+                zipOut.putNextEntry(zipEntry);
+                byte[] bytes = new byte[1024];
+                int length;
+                while ((length = fis.read(bytes)) >= 0) {
+                    zipOut.write(bytes, 0, length);
+                }
+                fis.close();
+            }
+            zipOut.close();
+            fos.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private String getFXName(String substring){
@@ -429,6 +486,7 @@ public class ContrastController {
 
     private void setReqUrl(Contrast contrast){
         contrast.setFatherfileUrl(getfileUrl + contrast.getFatherfileUrl());
+        contrast.setZipUrl(getfileUrl + contrast.getZipUrl());
         List<Result> resultList = contrast.getResultList();
         for(Result result : resultList){
             result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
