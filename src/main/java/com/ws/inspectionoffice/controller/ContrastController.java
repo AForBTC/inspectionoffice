@@ -10,25 +10,36 @@ import com.ws.inspectionoffice.mapper.ContrastMapper;
 import com.ws.inspectionoffice.model.Body;
 import com.ws.inspectionoffice.utils.JsonResponse;
 import com.ws.inspectionoffice.utils.ResponseCode;
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.xssf.usermodel.XSSFRichTextString;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
 
-import java.io.*;
+import java.awt.*;
+import java.awt.font.FontRenderContext;
+import java.awt.font.TextLayout;
+import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -96,17 +107,17 @@ public class ContrastController {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        HttpEntity requestEntity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-        String res = responseEntity.getBody();
-//        Path path = Paths.get("D://a.txt");
-//        byte[] bytes = new byte[0];
-//        try {
-//            bytes = Files.readAllBytes(path);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        String res =  new String(bytes);
+//        HttpEntity requestEntity = new HttpEntity<>(body, headers);
+//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+//        String res = responseEntity.getBody();
+        Path path = Paths.get("D://b.txt");
+        byte[] bytes = new byte[0];
+        try {
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String res =  new String(bytes);
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
@@ -175,21 +186,23 @@ public class ContrastController {
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
         if(contrasts != null && contrasts.size() > 0){
             setReqUrl(contrasts.get(0));
-            for(Result result : contrasts.get(0).getResultList()){
-                // 读取txt文件内容
-                StringBuilder txtContent = new StringBuilder();
-                BufferedReader txtReader = new BufferedReader(new FileReader(uploadDir + result.getResultfileHtmlUrl()));
-                String line;
-                while ((line = txtReader.readLine()) != null) {
-                    txtContent.append(line);
-                    txtContent.append("\n"); // 添加换行符
-                }
-                txtReader.close();
-                String txtString = txtContent.toString();
-                result.setResultfileHtml(txtString);
-            }
+//            for(Result result : contrasts.get(0).getResultList()){
+//                // 读取txt文件内容
+//                StringBuilder txtContent = new StringBuilder();
+//                BufferedReader txtReader = new BufferedReader(new FileReader(uploadDir + result.getResultfileHtmlUrl()));
+//                String line;
+//                while ((line = txtReader.readLine()) != null) {
+//                    txtContent.append(line);
+//                    txtContent.append("\n"); // 添加换行符
+//                }
+//                txtReader.close();
+//                String txtString = txtContent.toString();
+//                result.setResultfileHtml(txtString);
+//            }
+            return  new JsonResponse().code(ResponseCode.OK).data(contrasts.get(0));
+        } else {
+            return  new JsonResponse().code(ResponseCode.OK);
         }
-        return  new JsonResponse().code(ResponseCode.OK).data(contrasts.get(0));
     }
 
     @PostMapping("/addFile")
@@ -236,6 +249,41 @@ public class ContrastController {
         return path.substring(path.indexOf(getfileUrl) + getfileUrl.length());
     }
 
+    // 计算文本的高度
+    private short  calculateTextHeight(String text, int width, Workbook workbook) {
+        int length = text.length();
+            int n = 0;
+        if(length <= 27){
+            n = 1;
+        } else{
+            n = (int) Math.ceil(length / 27);
+        }
+
+        int count = 0;
+        int lastIndex = 0;
+        while (lastIndex != -1) {
+            lastIndex = text.indexOf("\n", lastIndex);
+            if (lastIndex != -1) {
+                count++;
+                lastIndex += "\n".length();
+            }
+        }
+        n = n + count;
+
+
+        Font font = workbook.createFont();
+        font.setFontName("Arial"); // 您可以根据需要更改字体
+        font.setFontHeightInPoints((short) 12);
+        java.awt.Font awtFont = new java.awt.Font(font.getFontName(), java.awt.Font.PLAIN, font.getFontHeightInPoints());
+        FontRenderContext frc = new FontRenderContext(null, true, true);
+        TextLayout layout = new TextLayout(text, awtFont, frc);
+        Rectangle2D bounds = layout.getBounds();
+        double textWidth = bounds.getWidth();
+        double lines = Math.ceil(textWidth / 200);
+        double lineHeight = bounds.getHeight();
+        return (short) (n * 16 * 20);
+    }
+
     private void createResultDocx(JSONObject resObj, Contrast contrast, Result result, List<Result> list){
         String fatherfileName = contrast.getFatherfileName();
         String upStr = null;
@@ -271,99 +319,225 @@ public class ContrastController {
                 downStr = "下级";
             }
         }
-        result.setResultfileName("对比结果" + result.getChildfileName().substring(0, result.getChildfileName().lastIndexOf(".")) + ".docx");
-        XWPFDocument document = new XWPFDocument();
-        // 添加标题
-        XWPFParagraph title = document.createParagraph();
-        title.setAlignment(ParagraphAlignment.CENTER);
-        XWPFRun titleRun = title.createRun();
-        titleRun.setText("对比结果" + result.getChildfileName());
-        titleRun.setBold(true);
-        titleRun.setFontSize(14);
-        addSection(document, "1.1风险点审查结果", null, null);
-        String riskpointTotal = resObj.getString("riskpoint_quantity");
-        result.setRiskpointTotal(Integer.parseInt(riskpointTotal));
-        JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
-        JSONArray correct = riskpoint_review.getJSONArray("correct");
-        addSection(document, "1.1.1修改的风险点", null, null);
-        for (Object correctobj : correct){
-            JSONObject correctJsonObj = (JSONObject) correctobj;
-            String superior_risk = correctJsonObj.getString("superior_risk");
-            JSONArray subordinate_risk = correctJsonObj.getJSONArray("subordinate_risk");
-            addSection(document, null, upStr + "风险点: " + superior_risk, null);
-            addSection(document, null, downStr + "风险点: ", null);
-            for (Object s : subordinate_risk){
-                String sStr = (String) s;
-                addSection(document, null, null, sStr);
+        result.setResultfileName("对比结果" + result.getChildfileName().substring(0, result.getChildfileName().lastIndexOf(".")) + ".xlsx");
+        try (Workbook workbook = new XSSFWorkbook()) {
+            // 创建第一个表格（风险点对比）
+            Sheet sheet1 = workbook.createSheet("风险点对比");
+            // 设置表头样式
+            CellStyle headerCellStyle = workbook.createCellStyle();
+            headerCellStyle.setWrapText(true);
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true); // 表头加粗
+            headerCellStyle.setAlignment(HorizontalAlignment.CENTER); // 设置水平居中
+            headerCellStyle.setVerticalAlignment(VerticalAlignment.CENTER); // 设置垂直居中
+            headerCellStyle.setFont(headerFont);
+            headerCellStyle.setBorderTop(BorderStyle.THIN);
+            headerCellStyle.setBorderBottom(BorderStyle.THIN);
+            headerCellStyle.setBorderLeft(BorderStyle.THIN);
+            headerCellStyle.setBorderRight(BorderStyle.THIN);
+            // 设置普通单元格样式 非居中
+            CellStyle cellStyle = workbook.createCellStyle();
+            cellStyle.setWrapText(true);
+            cellStyle.setBorderTop(BorderStyle.THIN);
+            cellStyle.setBorderBottom(BorderStyle.THIN);
+            cellStyle.setBorderLeft(BorderStyle.THIN);
+            cellStyle.setBorderRight(BorderStyle.THIN);
+            CellStyle cellStyleC = workbook.createCellStyle();
+            cellStyleC.setWrapText(true);
+            cellStyleC.setBorderTop(BorderStyle.THIN);
+            cellStyleC.setBorderBottom(BorderStyle.THIN);
+            cellStyleC.setBorderLeft(BorderStyle.THIN);
+            cellStyleC.setBorderRight(BorderStyle.THIN);
+            cellStyleC.setAlignment(HorizontalAlignment.CENTER); // 设置水平居中
+            cellStyleC.setVerticalAlignment(VerticalAlignment.CENTER); // 设置垂直居中
+            // 创建表头行
+            Row headerRow1 = sheet1.createRow(0);
+            String[] columns1 = {"增加风险点", "删除风险点"};
+            for (int i = 0; i < columns1.length; i++) {
+                Cell cell = headerRow1.createCell(i);
+                cell.setCellValue(columns1[i]);
+                cell.setCellStyle(headerCellStyle);
             }
-        }
-        JSONArray delete = riskpoint_review.getJSONArray("delete");
-        addSection(document, "1.1.2删除的风险点", null, null);
-        for (Object correctobj : delete){
-            String correctJsonObj = (String) correctobj;
-            addSection(document, null, correctJsonObj, null);
+            // 添加框线
+            for (int i = 0; i < columns1.length; i++) {
+                sheet1.autoSizeColumn(i);
+                sheet1.setColumnWidth(i, 10000);
+            }
+            JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
+            JSONArray add = riskpoint_review.getJSONArray("add");
+            JSONArray delete = riskpoint_review.getJSONArray("delete");
+            Integer h = (add.size() > delete.size()) ? add.size() : delete.size();
+            for (int i = 0; i < h; i++) {
+                Row row = sheet1.createRow(i + 1);
+                // 设置行高自适应
+                Cell cell = row.createCell(0);
+                Short ii = null;
+                if(i < add.size()){
+                    ii = calculateTextHeight(add.getString(i), 10000, workbook);
+                    StringBuilder stringBuilder = new StringBuilder(add.getString(i));
+                    int insertions = add.getString(i).length() / 26;
+                    for (int ic = 1; ic <= insertions; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index, '\n');
+                    }
+                    cell.setCellValue(stringBuilder.toString());
+                } else {
+                    cell.setCellValue("无");
+                }
+                cell.setCellStyle(cellStyleC); // 非表
 
-        }
-        JSONArray add = riskpoint_review.getJSONArray("add");
-        addSection(document, "1.1.3增加的风险点", null, null);
-        for (Object correctobj : add){
-            String correctJsonObj = (String) correctobj;
-            addSection(document, null, correctJsonObj, null);
+                Cell cell2 = row.createCell(1);
+                Short i2 = null;
+                if(i < delete.size()){
+                    i2 = calculateTextHeight(delete.getString(i), 10000, workbook);
+                    StringBuilder stringBuilder = new StringBuilder(delete.getString(i));
+                    int insertionsA = delete.getString(i).length() / 26;
+                    for (int ic = 1; ic <= insertionsA; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index , '\n');
+                    }
+                    cell2.setCellValue(stringBuilder.toString());
+                } else {
+                    cell2.setCellValue("无");
+                }
+                cell2.setCellStyle(cellStyle); //
+                if(ii == null && i2 != null){
+                    row.setHeight(i2);
+                } else if(ii == null && ii != null){
+                    row.setHeight(ii);
+                } else if(ii !=null && i2 != null){
+                    Short h2 = (ii > i2) ? ii : i2;
+                    row.setHeight(h2);
+                }
+            }
 
-        }
-        addSection(document, "1.2防控措施审查结果", null, null);
-        JSONArray measures_review = resObj.getJSONArray("measures_review");
-        if(measures_review != null && measures_review.size() > 0){
-            for(int i = 0; i < measures_review.size(); i++){
-                JSONObject o = (JSONObject) measures_review.get(i);
-                addSection(document, i+ ")", null, null);
-                addSection(document, upStr + "风险点: "+  o.getString("subordinate_risk"), null, null);
-                addSection(document, downStr + "风险点: "+ o.getString("superior_risk"), null, null);
+            // 创建第二个表格（防控措施对比）
+            Sheet sheet2 = workbook.createSheet("防控措施对比");
+            // 创建表头行
+            Row headerRow2 = sheet2.createRow(0);
+            String[] columns2 = {upStr + "风险点", upStr + "防控措施", downStr + "风险点", downStr + "市防控措施"};
+            for (int i = 0; i < columns2.length; i++) {
+                Cell cell = headerRow2.createCell(i);
+                cell.setCellValue(columns2[i]);
+                cell.setCellStyle(headerCellStyle);
+            }
+            // 添加框线
+            for (int i = 0; i < columns2.length; i++) {
+                sheet2.autoSizeColumn(i);
+                if(i == 0 || i == 2){
+                    sheet2.setColumnWidth(i, 8000);
+                } else {
+                    sheet2.setColumnWidth(i, 13000);
+                }
+            }
+            JSONArray measures_review = resObj.getJSONArray("measures_review");
+            for (int i = 0; i < measures_review.size(); i++) {
+                Row row = sheet2.createRow(i + 1);
+                // 设置行高自适应
+//                row.setHeight((short) -1);
+                JSONObject o = measures_review.getJSONObject(i);
+                String superior_risk = o.getString("superior_risk");
+                String superior_measures = o.getString("superior_measures");
+                short i11 = calculateTextHeight(superior_measures, 13000, workbook);
+                String subordinate_risk = o.getString("subordinate_risk");
+                String subordinate_measures = o.getString("subordinate_measures");
+                short i12 = calculateTextHeight(subordinate_measures, 13000, workbook);
+                if(i11 >= i12){
+                    row.setHeight(i11);
+                }else{
+                    row.setHeight(i12);
+                }
                 JSONArray addC = o.getJSONArray("add");
-                addSection(document, null, "增加防控措施:", null);
-                for (Object a : addC){
-                    String correctJsonObj = (String) a;
-                    addSection(document, null, null, correctJsonObj);
-                }
-                JSONArray correctC = o.getJSONArray("correct");
-                addSection(document, null, "修改防控措施:", null);
-                for (Object c : correctC){
-                    JSONObject correctJsonObj = (JSONObject) c;
-                    String superior_measures = correctJsonObj.getString("superior_measures");
-                    String subordinate_measures = correctJsonObj.getString("subordinate_measures");
-                    addSection(document, null, null, upStr + "防控措施: " + superior_measures);
-                    addSection(document, null, null, downStr + "防控措施: " + subordinate_measures);
-                }
-                JSONArray delC = o.getJSONArray("del");
-                addSection(document, null, "删除防控措施:", null);
-                for (Object d : delC){
-                    String correctJsonObj = (String) d;
-                    addSection(document, null, null, correctJsonObj);
-                }
-            }
-        }
+                JSONArray deleteC = o.getJSONArray("del");
 
-        // 保存文档到D盘
-        String html = null;
-        try {
+                Cell cell1 = row.createCell(0);
+                StringBuilder stringBuilderA = new StringBuilder(superior_risk);
+                int insertionsA = superior_risk.length() / 26;
+                for (int ic = 1; ic <= insertionsA; ic++) {
+                    int index = 26 * ic;
+                    stringBuilderA.insert(index , '\n');
+                }
+                cell1.setCellValue(stringBuilderA.toString());
+                cell1.setCellStyle(cellStyleC); // 非表头部分使用普通单元格样式
+
+                Cell cell2 = row.createCell(1);
+                if(deleteC !=null && deleteC.size() >= 1){
+                    Font font = workbook.createFont();
+                    font.setColor(IndexedColors.BLUE.getIndex()); // 设
+                    StringBuilder stringBuilder = new StringBuilder(superior_measures);
+                    int insertions = superior_measures.length() / 26;
+                    for (int ic = 1; ic <= insertions; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index , '\n');
+                    }
+                    RichTextString richText = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
+                    for(Object d : deleteC){
+                        String str = (String) d;
+                        int i1 = superior_measures.indexOf(str);
+                        if(i1 == -1){
+                            i1 = superior_measures.replaceAll("\\s+", "").indexOf(str);
+                        }
+                        richText.applyFont(i1, i1 + str.length(), font); //
+                    }
+
+                    cell2.setCellValue(richText);
+                } else {
+                    StringBuilder stringBuilder = new StringBuilder(superior_measures);
+                    int insertions = superior_measures.length() / 26;
+                    for (int ic = 1; ic <= insertions; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index , '\n');
+                    }
+                    cell2.setCellValue(stringBuilder.toString());
+                }
+                cell2.setCellStyle(cellStyle); // 非表头部分使用普通单元格样式
+                Cell cell3 = row.createCell(2);
+                cell3.setCellValue(subordinate_risk);
+                cell3.setCellStyle(cellStyleC); // 非表头部分使用普通单元格样式
+
+                Cell cell4 = row.createCell(3);
+                if(addC !=null && addC.size() >= 1){
+                    Font fontC = workbook.createFont();
+                    fontC.setColor(IndexedColors.RED.getIndex()); // 设
+                    StringBuilder stringBuilder = new StringBuilder(subordinate_measures);
+                    int insertions = subordinate_measures.length() / 26;
+                    for (int ic = 1; ic <= insertions; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index , '\n');
+                    }
+                    RichTextString richTextC = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
+                    for(Object a : addC){
+                        String str = (String) a;
+                        int i1 = subordinate_measures.indexOf(str);
+                        if(i1 == -1) {
+                            i1 = subordinate_measures.replaceAll("\\s+", "").indexOf(str);
+                        }
+                        richTextC.applyFont(i1, i1 + str.length(), fontC); //
+                    }
+
+                    cell4.setCellValue(richTextC);
+                } else {
+                    StringBuilder stringBuilder = new StringBuilder(subordinate_measures);
+                    int insertions = subordinate_measures.length() / 26;
+                    for (int ic = 1; ic <= insertions; ic++) {
+                        int index = 26 * ic;
+                        stringBuilder.insert(index , '\n');
+                    }
+                    cell4.setCellValue(stringBuilder.toString());
+                }
+                cell4.setCellStyle(cellStyle); // 非表头部分使用普通单元格样式
+            }
             FileOutputStream out = null;
             String childurl = result.getChildfileUrl();
             out = new FileOutputStream((uploadDir + childurl).replaceAll(childfileName, result.getResultfileName()));
             result.setResultfileUrl(childurl.replaceAll(childfileName, result.getResultfileName()));
-            document.write(out);
+            workbook.write(out);
             out.close();
-            html = convertWorkbookToString(document);
-            String txtFilePath = result.getResultfileUrl().replace(".docx", ".txt");
-            FileWriter txtWriter = new FileWriter(uploadDir + txtFilePath);
-            txtWriter.write(html);
-            txtWriter.close();
-            result.setResultfileHtmlUrl(txtFilePath);
         } catch (IOException e) {
             e.printStackTrace();
             throw new MobileModelException("服务器异常");
         }
         contrastMapper.insertResult(result);
-        result.setResultfileHtml(html);
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
     }
@@ -424,64 +598,6 @@ public class ContrastController {
             }
         }
         return upStr;
-    }
-
-    private void addSection(XWPFDocument document, String sectionTitle, String sectionContent, String sectionContent2) {
-        if (sectionTitle != null && !sectionTitle.equals("")) {
-            XWPFParagraph sectionTitlePara = document.createParagraph();
-            sectionTitlePara.setAlignment(ParagraphAlignment.LEFT);
-            XWPFRun sectionTitleRun = sectionTitlePara.createRun();
-            sectionTitleRun.setText(sectionTitle);
-        }
-        if (sectionContent != null && !sectionContent.equals("")) {
-            XWPFParagraph sectionContentPara = document.createParagraph();
-            sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
-            sectionContentPara.setIndentationFirstLine(400);
-            XWPFRun sectionContentRun = sectionContentPara.createRun();
-            sectionContentRun.setText(sectionContent);
-        }
-        if (sectionContent2 != null && !sectionContent2.equals("")) {
-            XWPFParagraph sectionContentPara = document.createParagraph();
-            sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
-            sectionContentPara.setIndentationFirstLine(800);
-            XWPFRun sectionContentRun = sectionContentPara.createRun();
-            sectionContentRun.setText(sectionContent2);
-        }
-
-    }
-
-    private String convertWorkbookToString(XWPFDocument document) throws IOException {
-        StringBuilder html = new StringBuilder("<html><head></head><body>");
-        List<XWPFParagraph> paragraphs = document.getParagraphs();
-        for (XWPFParagraph paragraph : paragraphs) {
-            String paragraphHtml = convertParagraphToHtml_p(paragraph);
-            html.append(paragraphHtml);
-        }
-        html.append("</body></html>");
-        return html.toString();
-    }
-
-    private static String convertParagraphToHtml_p(XWPFParagraph paragraph) {
-        StringBuilder paragraphHtml = new StringBuilder("<p>");
-
-        // Apply indentation if present
-        int indentationFirstLine = paragraph.getIndentationFirstLine();
-        if (indentationFirstLine > 0) {
-            // Convert indentation from twips to pixels (assuming 1 twip = 1/20 of a point)
-            int indentationPixels = indentationFirstLine / 20;
-            paragraphHtml.append("<span style=margin-left:").append(indentationPixels).append("px;>");
-        }
-
-        // Append text of the paragraph
-        paragraphHtml.append(paragraph.getText());
-
-        // Close indentation span if present
-        if (indentationFirstLine > 0) {
-            paragraphHtml.append("</span>");
-        }
-
-        paragraphHtml.append("</p>");
-        return paragraphHtml.toString();
     }
 
     private void setReqUrl(Contrast contrast){
