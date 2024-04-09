@@ -99,7 +99,7 @@ public class ContrastController {
             ByteArrayResource fileC = getFile(uploadDir + getNoReqPath(childUrl));
             mapC.put("file1",fileC);
             objects.add(mapC);
-            result.setChildfileUrl(uploadDir + getNoReqPath(childUrl));
+            result.setChildfileUrl(getNoReqPath(childUrl));
             result.setChildfileName(fileC.getFilename());
             result.setContrastId(contrast.getId());
             results.add(result);
@@ -176,7 +176,7 @@ public class ContrastController {
             }
         }catch (Exception e){
             e.printStackTrace();
-            throw new MobileModelException("删除失败，服务器异常");
+            throw new MobileModelException("删除失败，服务器异常" + e);
         }
         return  new JsonResponse().code(ResponseCode.OK);
     }
@@ -536,8 +536,7 @@ public class ContrastController {
             workbook.write(out);
             out.close();
         } catch (IOException e) {
-            e.printStackTrace();
-            throw new MobileModelException("服务器异常");
+            throw new MobileModelException("服务器异常" + e);
         }
     }
 
@@ -639,7 +638,7 @@ public class ContrastController {
             result.setResultfileHtmlUrl(txtFilePath);
         } catch (IOException e) {
             e.printStackTrace();
-            throw new MobileModelException("服务器异常");
+            throw new MobileModelException("服务器异常" + e);
         }
         contrastMapper.insertResult(result);
         result.setResultfileHtml(html);
