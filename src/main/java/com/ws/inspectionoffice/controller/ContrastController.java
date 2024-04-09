@@ -14,12 +14,15 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.xssf.usermodel.XSSFRichTextString;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
+import org.springframework.http.*;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -31,10 +34,7 @@ import java.awt.*;
 import java.awt.font.FontRenderContext;
 import java.awt.font.TextLayout;
 import java.awt.geom.Rectangle2D;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -107,17 +107,17 @@ public class ContrastController {
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-//        HttpEntity requestEntity = new HttpEntity<>(body, headers);
-//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-//        String res = responseEntity.getBody();
-        Path path = Paths.get("D://b.txt");
-        byte[] bytes = new byte[0];
-        try {
-            bytes = Files.readAllBytes(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String res =  new String(bytes);
+        HttpEntity requestEntity = new HttpEntity<>(body, headers);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+        String res = responseEntity.getBody();
+//        Path path = Paths.get("D://b.txt");
+//        byte[] bytes = new byte[0];
+//        try {
+//            bytes = Files.readAllBytes(path);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        String res =  new String(bytes);
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
@@ -128,7 +128,8 @@ public class ContrastController {
                 Optional<Result> fileOptional = results.stream()
                         .filter(result -> result.getChildfileName().startsWith(filename))
                         .findFirst();
-                createResultDocx(dataObj,contrast,fileOptional.get(), results);
+                createResultexcel(dataObj,contrast,fileOptional.get());
+                createResultDocx(dataObj,contrast,fileOptional.get());
             }
             contrast.setResultList(results);
             createZip(contrast);
@@ -174,7 +175,8 @@ public class ContrastController {
                 Hfile.delete();
             }
         }catch (Exception e){
-
+            e.printStackTrace();
+            throw new MobileModelException("删除失败，服务器异常");
         }
         return  new JsonResponse().code(ResponseCode.OK);
     }
@@ -186,19 +188,19 @@ public class ContrastController {
         List<Contrast> contrasts = contrastMapper.selectContrastList(contrast);
         if(contrasts != null && contrasts.size() > 0){
             setReqUrl(contrasts.get(0));
-//            for(Result result : contrasts.get(0).getResultList()){
-//                // 读取txt文件内容
-//                StringBuilder txtContent = new StringBuilder();
-//                BufferedReader txtReader = new BufferedReader(new FileReader(uploadDir + result.getResultfileHtmlUrl()));
-//                String line;
-//                while ((line = txtReader.readLine()) != null) {
-//                    txtContent.append(line);
-//                    txtContent.append("\n"); // 添加换行符
-//                }
-//                txtReader.close();
-//                String txtString = txtContent.toString();
-//                result.setResultfileHtml(txtString);
-//            }
+            for(Result result : contrasts.get(0).getResultList()){
+                // 读取txt文件内容
+                StringBuilder txtContent = new StringBuilder();
+                BufferedReader txtReader = new BufferedReader(new FileReader(uploadDir + result.getResultfileHtmlUrl()));
+                String line;
+                while ((line = txtReader.readLine()) != null) {
+                    txtContent.append(line);
+                    txtContent.append("\n"); // 添加换行符
+                }
+                txtReader.close();
+                String txtString = txtContent.toString();
+                result.setResultfileHtml(txtString);
+            }
             return  new JsonResponse().code(ResponseCode.OK).data(contrasts.get(0));
         } else {
             return  new JsonResponse().code(ResponseCode.OK);
@@ -256,7 +258,7 @@ public class ContrastController {
         if(length <= 27){
             n = 1;
         } else{
-            n = (int) Math.ceil(length / 27);
+            n = (int) Math.ceil((double) length / 27);
         }
 
         int count = 0;
@@ -284,7 +286,7 @@ public class ContrastController {
         return (short) (n * 16 * 20);
     }
 
-    private void createResultDocx(JSONObject resObj, Contrast contrast, Result result, List<Result> list){
+    private void createResultexcel(JSONObject resObj, Contrast contrast, Result result){
         String fatherfileName = contrast.getFatherfileName();
         String upStr = null;
         if(fatherfileName.contains("_")){
@@ -361,7 +363,7 @@ public class ContrastController {
             // 添加框线
             for (int i = 0; i < columns1.length; i++) {
                 sheet1.autoSizeColumn(i);
-                sheet1.setColumnWidth(i, 10000);
+                sheet1.setColumnWidth(i, 13000);
             }
             JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
             JSONArray add = riskpoint_review.getJSONArray("add");
@@ -373,7 +375,7 @@ public class ContrastController {
                 Cell cell = row.createCell(0);
                 Short ii = null;
                 if(i < add.size()){
-                    ii = calculateTextHeight(add.getString(i), 10000, workbook);
+                    ii = calculateTextHeight(add.getString(i), 13000, workbook);
                     StringBuilder stringBuilder = new StringBuilder(add.getString(i));
                     int insertions = add.getString(i).length() / 26;
                     for (int ic = 1; ic <= insertions; ic++) {
@@ -389,7 +391,7 @@ public class ContrastController {
                 Cell cell2 = row.createCell(1);
                 Short i2 = null;
                 if(i < delete.size()){
-                    i2 = calculateTextHeight(delete.getString(i), 10000, workbook);
+                    i2 = calculateTextHeight(delete.getString(i), 13000, workbook);
                     StringBuilder stringBuilder = new StringBuilder(delete.getString(i));
                     int insertionsA = delete.getString(i).length() / 26;
                     for (int ic = 1; ic <= insertionsA; ic++) {
@@ -403,7 +405,7 @@ public class ContrastController {
                 cell2.setCellStyle(cellStyle); //
                 if(ii == null && i2 != null){
                     row.setHeight(i2);
-                } else if(ii == null && ii != null){
+                } else if(ii != null && i2 == null){
                     row.setHeight(ii);
                 } else if(ii !=null && i2 != null){
                     Short h2 = (ii > i2) ? ii : i2;
@@ -537,9 +539,171 @@ public class ContrastController {
             e.printStackTrace();
             throw new MobileModelException("服务器异常");
         }
+    }
+
+    private void createResultDocx(JSONObject resObj, Contrast contrast, Result result){
+        String fatherfileName = contrast.getFatherfileName();
+        String upStr = null;
+        if(fatherfileName.contains("_")){
+            String substring = fatherfileName.substring(fatherfileName.lastIndexOf("_"));
+            upStr = getFXName(substring);
+            if(upStr == null){
+                upStr = getFXName(fatherfileName);
+                if (upStr == null){
+                    upStr = "省";
+                }
+            }
+        } else {
+            upStr = getFXName(fatherfileName);
+            if (upStr == null){
+                upStr = "省";
+            }
+        }
+        String childfileName = result.getChildfileName();
+        String downStr = null;
+        if(childfileName.contains("_")){
+            String substring = childfileName.substring(childfileName.lastIndexOf("_"));
+            downStr = getFXName(substring);
+            if(downStr == null){
+                downStr = getFXName(childfileName);
+                if (upStr == null){
+                    downStr = "下级";
+                }
+            }
+        } else {
+            downStr = getFXName(childfileName);
+            if (downStr == null){
+                downStr = "下级";
+            }
+        }
+        XWPFDocument document = new XWPFDocument();
+        // 添加标题
+        XWPFParagraph title = document.createParagraph();
+        title.setAlignment(ParagraphAlignment.CENTER);
+        XWPFRun titleRun = title.createRun();
+        titleRun.setText("对比结果" + result.getChildfileName());
+        titleRun.setBold(true);
+        titleRun.setFontSize(14);
+        addSection(document, "1.1风险点审查结果", null, null);
+        String riskpointTotal = resObj.getString("riskpoint_quantity");
+        result.setRiskpointTotal(Integer.parseInt(riskpointTotal));
+        JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
+        JSONArray delete = riskpoint_review.getJSONArray("delete");
+        addSection(document, "1.1.1删除的风险点", null, null);
+        for (Object correctobj : delete){
+            String correctJsonObj = (String) correctobj;
+            addSection(document, null, correctJsonObj, null);
+
+        }
+        JSONArray add = riskpoint_review.getJSONArray("add");
+        addSection(document, "1.1.2增加的风险点", null, null);
+        for (Object correctobj : add){
+            String correctJsonObj = (String) correctobj;
+            addSection(document, null, correctJsonObj, null);
+
+        }
+        addSection(document, "1.2防控措施审查结果", null, null);
+        JSONArray measures_review = resObj.getJSONArray("measures_review");
+        if(measures_review != null && measures_review.size() > 0){
+            for(int i = 0; i < measures_review.size(); i++){
+                JSONObject o = (JSONObject) measures_review.get(i);
+                addSection(document, (i + 1) + ")", null, null);
+//                addSection(document, upStr + "防控措施: ", o.getString("superior_measures"), null);
+//                addSection(document, downStr + "防控措施: ", o.getString("subordinate_measures"), null);
+                addSection(document, upStr + "风险点: "+  o.getString("superior_risk"), null, null);
+                addSection(document, downStr + "风险点: "+ o.getString("subordinate_risk"), null, null);
+                JSONArray addC = o.getJSONArray("add");
+                addSection(document, null, "增加防控措施:", null);
+                for (Object a : addC){
+                    String correctJsonObj = (String) a;
+                    addSection(document, null, null, correctJsonObj);
+                }
+                JSONArray delC = o.getJSONArray("del");
+                addSection(document, null, "删除防控措施:", null);
+                for (Object d : delC){
+                    String correctJsonObj = (String) d;
+                    addSection(document, null, null, correctJsonObj);
+                }
+            }
+        }
+
+        // 保存文档到D盘
+        String html = null;
+        try {
+            html = convertWorkbookToString(document);
+            String txtFilePath = result.getResultfileUrl().replace(".xlsx", ".txt");
+//            String noReqPath = getNoReqPath(txtFilePath);
+            FileWriter txtWriter = new FileWriter(uploadDir + txtFilePath);
+            txtWriter.write(html);
+            txtWriter.close();
+            result.setResultfileHtmlUrl(txtFilePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new MobileModelException("服务器异常");
+        }
         contrastMapper.insertResult(result);
+        result.setResultfileHtml(html);
+        result.setResultfileHtmlUrl(getfileUrl + result.getResultfileHtmlUrl());
         result.setResultfileUrl(getfileUrl + result.getResultfileUrl());
         result.setChildfileUrl(getfileUrl + result.getChildfileUrl());
+    }
+
+    private String convertWorkbookToString(XWPFDocument document) throws IOException {
+        StringBuilder html = new StringBuilder("<html><head></head><body>");
+        List<XWPFParagraph> paragraphs = document.getParagraphs();
+        for (XWPFParagraph paragraph : paragraphs) {
+            String paragraphHtml = convertParagraphToHtml_p(paragraph);
+            html.append(paragraphHtml);
+        }
+        html.append("</body></html>");
+        return html.toString();
+    }
+
+    private static String convertParagraphToHtml_p(XWPFParagraph paragraph) {
+        StringBuilder paragraphHtml = new StringBuilder("<p>");
+
+        // Apply indentation if present
+        int indentationFirstLine = paragraph.getIndentationFirstLine();
+        if (indentationFirstLine > 0) {
+            // Convert indentation from twips to pixels (assuming 1 twip = 1/20 of a point)
+            int indentationPixels = indentationFirstLine / 20;
+            paragraphHtml.append("<span style=margin-left:").append(indentationPixels).append("px;>");
+        }
+
+        // Append text of the paragraph
+        paragraphHtml.append(paragraph.getText());
+
+        // Close indentation span if present
+        if (indentationFirstLine > 0) {
+            paragraphHtml.append("</span>");
+        }
+
+        paragraphHtml.append("</p>");
+        return paragraphHtml.toString();
+    }
+
+    private void addSection(XWPFDocument document, String sectionTitle, String sectionContent, String sectionContent2) {
+        if (sectionTitle != null && !sectionTitle.equals("")) {
+            XWPFParagraph sectionTitlePara = document.createParagraph();
+            sectionTitlePara.setAlignment(ParagraphAlignment.LEFT);
+            XWPFRun sectionTitleRun = sectionTitlePara.createRun();
+            sectionTitleRun.setText(sectionTitle);
+        }
+        if (sectionContent != null && !sectionContent.equals("")) {
+            XWPFParagraph sectionContentPara = document.createParagraph();
+            sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
+            sectionContentPara.setIndentationFirstLine(400);
+            XWPFRun sectionContentRun = sectionContentPara.createRun();
+            sectionContentRun.setText(sectionContent);
+        }
+        if (sectionContent2 != null && !sectionContent2.equals("")) {
+            XWPFParagraph sectionContentPara = document.createParagraph();
+            sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
+            sectionContentPara.setIndentationFirstLine(800);
+            XWPFRun sectionContentRun = sectionContentPara.createRun();
+            sectionContentRun.setText(sectionContent2);
+        }
+
     }
 
     private void createZip(Contrast contrast){
@@ -599,6 +763,7 @@ public class ContrastController {
         }
         return upStr;
     }
+
 
     private void setReqUrl(Contrast contrast){
         contrast.setFatherfileUrl(getfileUrl + contrast.getFatherfileUrl());
