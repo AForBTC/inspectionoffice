@@ -90,20 +90,20 @@ public class ContrastController {
         contrast.setContrastName(modifiedFilename);
         contrast.setCreateTimestamp(new Date());
         contrastMapper.insertContrast(contrast);
-        body.add("file1", new FileSystemResource(new File(getNoReqPath(postBody.getFatherUrl()))));
+        body.add("file1", new FileSystemResource(new File(uploadDir + getNoReqPath(postBody.getFatherUrl()))));
         ArrayList<Result> results = new ArrayList<>();
         String[] arr = postBody.getChildUrlList().split(",");
         for (String childUrl : arr){
             Result result = new Result();
             HashMap<String, Object> mapC = new HashMap<>();
-            ByteArrayResource fileC = getFile(getNoReqPath(childUrl));
+            ByteArrayResource fileC = getFile(uploadDir + getNoReqPath(childUrl));
             mapC.put("file1",fileC);
             objects.add(mapC);
-            result.setChildfileUrl(getNoReqPath(childUrl));
+            result.setChildfileUrl(uploadDir + getNoReqPath(childUrl));
             result.setChildfileName(fileC.getFilename());
             result.setContrastId(contrast.getId());
             results.add(result);
-            body.add("file1", new FileSystemResource(new File(getNoReqPath(childUrl))));
+            body.add("file1", new FileSystemResource(new File(uploadDir + getNoReqPath(childUrl))));
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
