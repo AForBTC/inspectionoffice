@@ -96,7 +96,7 @@ public class ContrastController {
         for (String childUrl : arr){
             Result result = new Result();
             HashMap<String, Object> mapC = new HashMap<>();
-            ByteArrayResource fileC = getFile(uploadDir + getNoReqPath(childUrl));
+            ByteArrayResource fileC = getFile(getNoReqPath(childUrl));
             mapC.put("file1",fileC);
             objects.add(mapC);
             result.setChildfileUrl(getNoReqPath(childUrl));
@@ -108,23 +108,23 @@ public class ContrastController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-        String res = responseEntity.getBody();
-//        Path path = Paths.get("D://b.txt");
-//        byte[] bytes = new byte[0];
-//        try {
-//            bytes = Files.readAllBytes(path);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        String res =  new String(bytes);
+//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+//        String res = responseEntity.getBody();
+        Path path = Paths.get("D://a.txt");
+        byte[] bytes = new byte[0];
+        try {
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String res =  new String(bytes);
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
             JSONArray dataJsonArr = resObject.getJSONArray("data");
             for(Object data : dataJsonArr){
                 JSONObject dataObj = (JSONObject) data;
-                String filename = dataObj.getString("filename");
+                String filename = dataObj.getString("filename").substring(0, dataObj.getString("filename").lastIndexOf("."));
                 Optional<Result> fileOptional = results.stream()
                         .filter(result -> result.getChildfileName().startsWith(filename))
                         .findFirst();
@@ -344,6 +344,7 @@ public class ContrastController {
             cellStyle.setBorderBottom(BorderStyle.THIN);
             cellStyle.setBorderLeft(BorderStyle.THIN);
             cellStyle.setBorderRight(BorderStyle.THIN);
+            cellStyle.setVerticalAlignment(VerticalAlignment.CENTER); // 设置垂直居中
             CellStyle cellStyleC = workbook.createCellStyle();
             cellStyleC.setWrapText(true);
             cellStyleC.setBorderTop(BorderStyle.THIN);
@@ -463,7 +464,7 @@ public class ContrastController {
                 cell1.setCellStyle(cellStyleC); // 非表头部分使用普通单元格样式
 
                 Cell cell2 = row.createCell(1);
-                if(deleteC !=null && deleteC.size() >= 1){
+                if(deleteC != null && deleteC.size() >= 1){
                     Font font = workbook.createFont();
                     font.setColor(IndexedColors.BLUE.getIndex()); // 设
                     StringBuilder stringBuilder = new StringBuilder(superior_measures);
@@ -474,12 +475,10 @@ public class ContrastController {
                     }
                     RichTextString richText = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object d : deleteC){
-                        String str = (String) d;
-                        int i1 = superior_measures.indexOf(str);
-                        if(i1 == -1){
-                            i1 = superior_measures.replaceAll("\\s+", "").indexOf(str);
-                        }
-                        richText.applyFont(i1, i1 + str.length(), font); //
+                        JSONArray indexs = (JSONArray) d;
+                        Integer beginIndex = indexs.getInteger(0);
+                        Integer endIndex = indexs.getInteger(1);
+                        richText.applyFont(beginIndex, endIndex, font); //
                     }
 
                     cell2.setCellValue(richText);
@@ -509,12 +508,10 @@ public class ContrastController {
                     }
                     RichTextString richTextC = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object a : addC){
-                        String str = (String) a;
-                        int i1 = subordinate_measures.indexOf(str);
-                        if(i1 == -1) {
-                            i1 = subordinate_measures.replaceAll("\\s+", "").indexOf(str);
-                        }
-                        richTextC.applyFont(i1, i1 + str.length(), fontC); //
+                        JSONArray indexs = (JSONArray) a;
+                        Integer beginIndex = indexs.getInteger(0);
+                        Integer endIndex = indexs.getInteger(1);
+                        richTextC.applyFont(beginIndex, endIndex, fontC); //
                     }
 
                     cell4.setCellValue(richTextC);
@@ -614,14 +611,16 @@ public class ContrastController {
                 JSONArray addC = o.getJSONArray("add");
                 addSection(document, null, "增加防控措施:", null);
                 for (Object a : addC){
-                    String correctJsonObj = (String) a;
-                    addSection(document, null, null, correctJsonObj);
+                    JSONArray aArr = (JSONArray) a;
+                    JSONArray indexArr = (JSONArray) aArr;
+                    addSection(document, null, null, o.getString("subordinate_measures").substring(indexArr.getInteger(0), indexArr.getInteger(1)));
                 }
                 JSONArray delC = o.getJSONArray("del");
                 addSection(document, null, "删除防控措施:", null);
                 for (Object d : delC){
-                    String correctJsonObj = (String) d;
-                    addSection(document, null, null, correctJsonObj);
+                    JSONArray dArr = (JSONArray) d;
+                    JSONArray indexArr = (JSONArray) dArr;
+                    addSection(document, null, null, o.getString("superior_measures").substring(indexArr.getInteger(0), indexArr.getInteger(1)));
                 }
             }
         }
