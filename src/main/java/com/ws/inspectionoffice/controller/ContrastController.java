@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.ws.inspectionoffice.MobileModelException;
 import com.ws.inspectionoffice.entity.Contrast;
+import com.ws.inspectionoffice.entity.Number;
 import com.ws.inspectionoffice.entity.Result;
 import com.ws.inspectionoffice.mapper.ContrastMapper;
 import com.ws.inspectionoffice.model.Body;
@@ -108,16 +109,17 @@ public class ContrastController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-        String res = responseEntity.getBody();
-//        Path path = Paths.get("D://a.txt");
-//        byte[] bytes = new byte[0];
-//        try {
-//            bytes = Files.readAllBytes(path);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        String res =  new String(bytes);
+//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+//        String res = responseEntity.getBody();
+        Path path = Paths.get("D://a.txt");
+        byte[] bytes = new byte[0];
+        try {
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String res =  new String(bytes);
+        Number number = contrastMapper.selectNumber();
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
@@ -128,11 +130,13 @@ public class ContrastController {
                 Optional<Result> fileOptional = results.stream()
                         .filter(result -> result.getChildfileName().startsWith(filename))
                         .findFirst();
-                createResultexcel(dataObj,contrast,fileOptional.get());
-                createResultDocx(dataObj,contrast,fileOptional.get());
+                createResultexcel(dataObj,contrast,fileOptional.get(), number);
+                createResultDocx(dataObj,contrast,fileOptional.get(), number);
             }
             contrast.setResultList(results);
             createZip(contrast);
+            number.setChildTotal(number.getChildTotal() + arr.length);
+            contrastMapper.updateNumber(number);
             return new JsonResponse().code(ResponseCode.OK).data(contrast);
         } else {
             throw new MobileModelException("服务器异常");
@@ -286,7 +290,9 @@ public class ContrastController {
         return (short) (n * 16 * 20);
     }
 
-    private void createResultexcel(JSONObject resObj, Contrast contrast, Result result){
+    private void createResultexcel(JSONObject resObj, Contrast contrast, Result result, Number number){
+        long addTotal = 0;
+        long delTotal = 0;
         String fatherfileName = contrast.getFatherfileName();
         String upStr = null;
         if(fatherfileName.contains("_")){
@@ -475,6 +481,7 @@ public class ContrastController {
 //                    }
                     RichTextString richText = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object d : deleteC){
+                        delTotal += 1;
                         JSONArray indexs = (JSONArray) d;
                         Integer beginIndex = indexs.getInteger(0);
                         Integer endIndex = indexs.getInteger(1);
@@ -508,6 +515,7 @@ public class ContrastController {
 //                    }
                     RichTextString richTextC = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object a : addC){
+                        addTotal += 1;
                         JSONArray indexs = (JSONArray) a;
                         Integer beginIndex = indexs.getInteger(0);
                         Integer endIndex = indexs.getInteger(1);
@@ -532,12 +540,14 @@ public class ContrastController {
             result.setResultfileUrl(childurl.replaceAll(childfileName, result.getResultfileName()));
             workbook.write(out);
             out.close();
+            number.setAddTotal(number.getAddTotal() + addTotal);
+            number.setDelTotal(number.getDelTotal() + delTotal);
         } catch (IOException e) {
             throw new MobileModelException("服务器异常" + e);
         }
     }
 
-    private void createResultDocx(JSONObject resObj, Contrast contrast, Result result){
+    private void createResultDocx(JSONObject resObj, Contrast contrast, Result result, Number number){
         String fatherfileName = contrast.getFatherfileName();
         String upStr = null;
         if(fatherfileName.contains("_")){
@@ -583,6 +593,7 @@ public class ContrastController {
         addSection(document, "1.1风险点审查结果", null, null);
         String riskpointTotal = resObj.getString("riskpoint_quantity");
         result.setRiskpointTotal(Integer.parseInt(riskpointTotal));
+        number.setRiskpointTotal(number.getRiskpointTotal() + Long.parseLong(riskpointTotal));
         JSONObject riskpoint_review = resObj.getJSONObject("riskpoint_review");
         JSONArray delete = riskpoint_review.getJSONArray("delete");
         addSection(document, "1.1.1删除的风险点", null, null);

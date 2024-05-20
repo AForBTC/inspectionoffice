@@ -26,6 +26,13 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         <result property="resultfileHtmlUrl" column="resultfileHtml_url"/>
     </resultMap>
 
+    <resultMap type="Number" id="NumberResult">
+        <result property="childTotal"    column="child_total"    />
+        <result property="addTotal"    column="add_total"    />
+        <result property="delTotal"    column="del_total"    />
+        <result property="riskpointTotal"    column="riskpoint_total"    />
+    </resultMap>
+
     <update id="updateContrast">
         update contrast
         <trim prefix="SET" suffixOverrides=",">
@@ -50,6 +57,10 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="id != null">co.id = #{id}</if>
         </where>
         ORDER BY co.create_timestamp DESC;
+    </select>
+
+    <select id="selectNumber"  resultMap="NumberResult">
+        SELECT child_total,add_total,del_total,riskpoint_total from `number`;
     </select>
 
     <insert id="insertContrast" parameterType="Contrast" useGeneratedKeys="true" keyProperty="id">
@@ -93,4 +104,14 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
             <if test="resultfileHtmlUrl != null  and resultfileHtmlUrl != ''">#{resultfileHtmlUrl},</if>
         </trim>
     </insert>
+
+    <update id="updateNumber" parameterType="Number">
+        update `number`
+        <set>
+            <if test="childTotal != null">child_total = #{childTotal},</if>
+            <if test="addTotal != null">add_total = #{addTotal},</if>
+            <if test="delTotal != null">del_total = #{delTotal},</if>
+            <if test="riskpointTotal != null">riskpoint_total = #{riskpointTotal},</if>
+        </set>
+    </update>
 </mapper>
