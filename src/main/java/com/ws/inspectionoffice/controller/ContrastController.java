@@ -108,16 +108,16 @@ public class ContrastController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-//        String res = responseEntity.getBody();
-        Path path = Paths.get("D://a.txt");
-        byte[] bytes = new byte[0];
-        try {
-            bytes = Files.readAllBytes(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String res =  new String(bytes);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+        String res = responseEntity.getBody();
+//        Path path = Paths.get("D://a.txt");
+//        byte[] bytes = new byte[0];
+//        try {
+//            bytes = Files.readAllBytes(path);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        String res =  new String(bytes);
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
         if(code.equals("0")){
@@ -376,13 +376,13 @@ public class ContrastController {
                 Cell cell = row.createCell(0);
                 Short ii = null;
                 if(i < add.size()){
-                    ii = calculateTextHeight(add.getString(i), 13000, workbook);
+//                    ii = calculateTextHeight(add.getString(i), 13000, workbook);
                     StringBuilder stringBuilder = new StringBuilder(add.getString(i));
-                    int insertions = add.getString(i).length() / 26;
-                    for (int ic = 1; ic <= insertions; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index, '\n');
-                    }
+//                    int insertions = add.getString(i).length() / 26;
+//                    for (int ic = 1; ic <= insertions; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index, '\n');
+//                    }
                     cell.setCellValue(stringBuilder.toString());
                 } else {
                     cell.setCellValue("无");
@@ -394,11 +394,11 @@ public class ContrastController {
                 if(i < delete.size()){
                     i2 = calculateTextHeight(delete.getString(i), 13000, workbook);
                     StringBuilder stringBuilder = new StringBuilder(delete.getString(i));
-                    int insertionsA = delete.getString(i).length() / 26;
-                    for (int ic = 1; ic <= insertionsA; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index , '\n');
-                    }
+//                    int insertionsA = delete.getString(i).length() / 26;
+//                    for (int ic = 1; ic <= insertionsA; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index , '\n');
+//                    }
                     cell2.setCellValue(stringBuilder.toString());
                 } else {
                     cell2.setCellValue("无");
@@ -455,11 +455,11 @@ public class ContrastController {
 
                 Cell cell1 = row.createCell(0);
                 StringBuilder stringBuilderA = new StringBuilder(superior_risk);
-                int insertionsA = superior_risk.length() / 26;
-                for (int ic = 1; ic <= insertionsA; ic++) {
-                    int index = 26 * ic;
-                    stringBuilderA.insert(index , '\n');
-                }
+//                int insertionsA = superior_risk.length() / 26;
+//                for (int ic = 1; ic <= insertionsA; ic++) {
+//                    int index = 26 * ic;
+//                    stringBuilderA.insert(index , '\n');
+//                }
                 cell1.setCellValue(stringBuilderA.toString());
                 cell1.setCellStyle(cellStyleC); // 非表头部分使用普通单元格样式
 
@@ -469,10 +469,10 @@ public class ContrastController {
                     font.setColor(IndexedColors.BLUE.getIndex()); // 设
                     StringBuilder stringBuilder = new StringBuilder(superior_measures);
                     int insertions = superior_measures.length() / 26;
-                    for (int ic = 1; ic <= insertions; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index , '\n');
-                    }
+//                    for (int ic = 1; ic <= insertions; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index , '\n');
+//                    }
                     RichTextString richText = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object d : deleteC){
                         JSONArray indexs = (JSONArray) d;
@@ -484,11 +484,11 @@ public class ContrastController {
                     cell2.setCellValue(richText);
                 } else {
                     StringBuilder stringBuilder = new StringBuilder(superior_measures);
-                    int insertions = superior_measures.length() / 26;
-                    for (int ic = 1; ic <= insertions; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index , '\n');
-                    }
+//                    int insertions = superior_measures.length() / 26;
+//                    for (int ic = 1; ic <= insertions; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index , '\n');
+//                    }
                     cell2.setCellValue(stringBuilder.toString());
                 }
                 cell2.setCellStyle(cellStyle); // 非表头部分使用普通单元格样式
@@ -501,11 +501,11 @@ public class ContrastController {
                     Font fontC = workbook.createFont();
                     fontC.setColor(IndexedColors.RED.getIndex()); // 设
                     StringBuilder stringBuilder = new StringBuilder(subordinate_measures);
-                    int insertions = subordinate_measures.length() / 26;
-                    for (int ic = 1; ic <= insertions; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index , '\n');
-                    }
+//                    int insertions = subordinate_measures.length() / 26;
+//                    for (int ic = 1; ic <= insertions; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index , '\n');
+//                    }
                     RichTextString richTextC = new XSSFRichTextString(stringBuilder.toString()); // 设置部分文字的样式
                     for(Object a : addC){
                         JSONArray indexs = (JSONArray) a;
@@ -517,11 +517,11 @@ public class ContrastController {
                     cell4.setCellValue(richTextC);
                 } else {
                     StringBuilder stringBuilder = new StringBuilder(subordinate_measures);
-                    int insertions = subordinate_measures.length() / 26;
-                    for (int ic = 1; ic <= insertions; ic++) {
-                        int index = 26 * ic;
-                        stringBuilder.insert(index , '\n');
-                    }
+//                    int insertions = subordinate_measures.length() / 26;
+//                    for (int ic = 1; ic <= insertions; ic++) {
+//                        int index = 26 * ic;
+//                        stringBuilder.insert(index , '\n');
+//                    }
                     cell4.setCellValue(stringBuilder.toString());
                 }
                 cell4.setCellStyle(cellStyle); // 非表头部分使用普通单元格样式
