@@ -589,7 +589,7 @@ public class ContrastController {
         XWPFRun titleRun = title.createRun();
         titleRun.setText("对比结果" + result.getChildfileName());
         titleRun.setBold(true);
-        titleRun.setFontSize(14);
+        titleRun.setFontSize(16);
         addSection(document, "1.1风险点审查结果", null, null);
         String riskpointTotal = resObj.getString("riskpoint_quantity");
         result.setRiskpointTotal(Integer.parseInt(riskpointTotal));
@@ -662,7 +662,11 @@ public class ContrastController {
         List<XWPFParagraph> paragraphs = document.getParagraphs();
         for (XWPFParagraph paragraph : paragraphs) {
             String paragraphHtml = convertParagraphToHtml_p(paragraph);
-            html.append(paragraphHtml);
+            if(paragraph == paragraphs.get(0)){
+                html.append(paragraphHtml.replace("<p>", "<p style=\"font-size: 16px; font-weight: bold\">"));
+            } else {
+                html.append(paragraphHtml);
+            }
         }
         html.append("</body></html>");
         return html.toString();
@@ -676,7 +680,7 @@ public class ContrastController {
         if (indentationFirstLine > 0) {
             // Convert indentation from twips to pixels (assuming 1 twip = 1/20 of a point)
             int indentationPixels = indentationFirstLine / 20;
-            paragraphHtml.append("<span style=margin-left:").append(indentationPixels).append("px;>");
+            paragraphHtml.append("<span style=\"font-size: 14px;margin-left:").append(indentationPixels).append("px;\">");
         }
 
         // Append text of the paragraph
@@ -696,6 +700,8 @@ public class ContrastController {
             XWPFParagraph sectionTitlePara = document.createParagraph();
             sectionTitlePara.setAlignment(ParagraphAlignment.LEFT);
             XWPFRun sectionTitleRun = sectionTitlePara.createRun();
+            sectionTitleRun.setFontSize(14);
+            sectionTitleRun.setBold(false);
             sectionTitleRun.setText(sectionTitle);
         }
         if (sectionContent != null && !sectionContent.equals("")) {
@@ -703,6 +709,8 @@ public class ContrastController {
             sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
             sectionContentPara.setIndentationFirstLine(400);
             XWPFRun sectionContentRun = sectionContentPara.createRun();
+            sectionContentRun.setFontSize(14);
+            sectionContentRun.setBold(false);
             sectionContentRun.setText(sectionContent);
         }
         if (sectionContent2 != null && !sectionContent2.equals("")) {
@@ -710,6 +718,8 @@ public class ContrastController {
             sectionContentPara.setAlignment(ParagraphAlignment.LEFT);
             sectionContentPara.setIndentationFirstLine(800);
             XWPFRun sectionContentRun = sectionContentPara.createRun();
+            sectionContentRun.setFontSize(14);
+            sectionContentRun.setBold(false);
             sectionContentRun.setText(sectionContent2);
         }
 
