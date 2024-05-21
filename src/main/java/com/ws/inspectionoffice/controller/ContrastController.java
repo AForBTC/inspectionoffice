@@ -109,16 +109,16 @@ public class ContrastController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-//        String res = responseEntity.getBody();
-        Path path = Paths.get("D://a.txt");
-        byte[] bytes = new byte[0];
-        try {
-            bytes = Files.readAllBytes(path);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String res =  new String(bytes);
+        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+        String res = responseEntity.getBody();
+//        Path path = Paths.get("D://a.txt");
+//        byte[] bytes = new byte[0];
+//        try {
+//            bytes = Files.readAllBytes(path);
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        String res =  new String(bytes);
         Number number = contrastMapper.selectNumber();
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
