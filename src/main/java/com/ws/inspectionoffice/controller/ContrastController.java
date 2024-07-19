@@ -109,16 +109,16 @@ public class ContrastController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity requestEntity = new HttpEntity<>(body, headers);
-        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
-        String res = responseEntity.getBody();
-//        Path path = Paths.get("D://a.txt");
-//        byte[] bytes = new byte[0];
-//        try {
-//            bytes = Files.readAllBytes(path);
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//        String res =  new String(bytes);
+//        ResponseEntity<String> responseEntity = restTemplate.exchange(contrastUrl, HttpMethod.POST, requestEntity, String.class);
+//        String res = responseEntity.getBody();
+        Path path = Paths.get("D://a.txt");
+        byte[] bytes = new byte[0];
+        try {
+            bytes = Files.readAllBytes(path);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        String res =  new String(bytes);
         Number number = contrastMapper.selectNumber();
         JSONObject resObject = JSON.parseObject(res);
         String code = resObject.getString("code");
@@ -138,7 +138,9 @@ public class ContrastController {
             number.setChildTotal(number.getChildTotal() + arr.length);
             contrastMapper.updateNumber(number);
             return new JsonResponse().code(ResponseCode.OK).data(contrast);
-        } else {
+        } else if(code.equals("1")){
+            return new JsonResponse().code(ResponseCode.ERROR_LOGIN_ERROR).data("文件格式不正确");
+        } {
             throw new MobileModelException("服务器异常");
         }
     }
