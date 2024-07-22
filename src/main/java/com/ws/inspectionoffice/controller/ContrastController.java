@@ -3,6 +3,7 @@ package com.ws.inspectionoffice.controller;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.ws.inspectionoffice.GlobalExceptionHandler;
 import com.ws.inspectionoffice.MobileModelException;
 import com.ws.inspectionoffice.entity.Contrast;
 import com.ws.inspectionoffice.entity.Number;
@@ -19,6 +20,8 @@ import org.apache.poi.xwpf.usermodel.ParagraphAlignment;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -46,6 +49,9 @@ import java.util.zip.ZipOutputStream;
 
 @RestController
 public class ContrastController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ContrastController.class);
+
 
     @Value("${contrast.url}")
     private String contrastUrl;
@@ -121,6 +127,7 @@ public class ContrastController {
 //        String res =  new String(bytes);
         Number number = contrastMapper.selectNumber();
         JSONObject resObject = JSON.parseObject(res);
+        LOGGER.info("对比返回结果" + resObject.toJSONString());
         String code = resObject.getString("code");
         if(code.equals("0")){
             JSONArray dataJsonArr = resObject.getJSONArray("data");
@@ -139,7 +146,7 @@ public class ContrastController {
             contrastMapper.updateNumber(number);
             return new JsonResponse().code(ResponseCode.OK).data(contrast);
         } else if(code.equals("1")){
-            return new JsonResponse().code(ResponseCode.ERROR_LOGIN_ERROR).data("文件格式不正确");
+            return new JsonResponse().code(ResponseCode.ERROR_LOGIN_ERROR).message("数据格式错误，请重新上传");
         } {
             throw new MobileModelException("服务器异常");
         }
